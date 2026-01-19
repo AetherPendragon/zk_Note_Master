@@ -105,6 +105,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     private Button mAddNewNote;
     private Button mMemoryBottle;
+    private MemoryBottleDialog mMemoryBottleDialog;
 
     private boolean mDispatch;
 
@@ -594,8 +595,19 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     }
 
     private void openMemoryBottle() {
-        Intent intent = new Intent(this, MemoryBottleActivity.class);
-        startActivity(intent);
+        if (mMemoryBottleDialog == null) {
+            mMemoryBottleDialog = new MemoryBottleDialog(this);
+        }
+        mMemoryBottleDialog.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (mMemoryBottleDialog != null && mMemoryBottleDialog.isShowing()) {
+            mMemoryBottleDialog.dismiss();
+        }
+        mMemoryBottleDialog = null;
+        super.onDestroy();
     }
 
     private void showSoftInput() {
