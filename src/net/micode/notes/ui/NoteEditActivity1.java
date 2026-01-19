@@ -984,6 +984,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         } else {
             // 确保获取最新的富文本内容
             String currentHtml = normalizeEditorHtml(mNoteEditor.getHtml());
+            if (TextUtils.isEmpty(currentHtml) && !TextUtils.isEmpty(mText)) {
+                currentHtml = normalizeEditorHtml(mText);
+            }
             mWorkingNote.setWorkingText(currentHtml);
             mText = currentHtml; // 更新mText变量，确保保存时使用最新内容
         }
@@ -1161,8 +1164,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
         String imgHtmlTag = buildImageHtmlTag(localImagePath);
         String curHtml = normalizeEditorHtml(mNoteEditor.getHtml());
-        mNoteEditor.setHtml(curHtml + imgHtmlTag);
+        String newHtml = curHtml + imgHtmlTag;
+        mNoteEditor.setHtml(newHtml);
         mNoteEditor.focusEditor();
+        mText = newHtml;
+        mWorkingNote.setWorkingText(newHtml);
     }
 
     private String buildImageHtmlTag(String localImagePath) {
@@ -1294,10 +1300,19 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         int index = Math.max(0, Math.min(which, TEXT_COLOR_VALUES.length - 1));
-                        mNoteEditor.setTextColor(TEXT_COLOR_VALUES[index]);
+                        applyTextColor(TEXT_COLOR_VALUES[index]);
                         dialog.dismiss();
                     }
                 })
                 .show();
+    }
+
+    private void applyTextColor(int color) {
+        if (mNoteEditor == null) {
+            return;
+        }
+        String hex = String.format("#%06X", (0xFFFFFF & color));
+        mNoteEditor.loadUrl("javascript:RE.setTextColor('" + hex + "')");
+        mNoteEditor.setTextColor(color);
     }
 }
