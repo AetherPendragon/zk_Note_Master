@@ -69,6 +69,8 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     private long mMemoryFolderId;
     private boolean mLoading;
     private LoadTask mLoadTask;
+    private boolean mBrowseLoading;
+    private BrowseTask mBrowseTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +107,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             mLoadTask.cancel(true);
             mLoadTask = null;
         }
+        if (mBrowseTask != null) {
+            mBrowseTask.cancel(true);
+            mBrowseTask = null;
+        }
         super.onDestroy();
     }
 
@@ -119,11 +125,21 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
 
     private void setLoading(boolean loading) {
         mLoading = loading;
+        updateButtonState();
+    }
+
+    private void setBrowseLoading(boolean loading) {
+        mBrowseLoading = loading;
+        updateButtonState();
+    }
+
+    private void updateButtonState() {
+        boolean enabled = !(mLoading || mBrowseLoading);
         if (mAddButton != null) {
-            mAddButton.setEnabled(!loading);
+            mAddButton.setEnabled(enabled);
         }
         if (mBrowseButton != null) {
-            mBrowseButton.setEnabled(!loading);
+            mBrowseButton.setEnabled(enabled);
         }
     }
 
@@ -143,11 +159,7 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             while (cursor.moveToNext()) {
                 long noteId = cursor.getLong(0);
                 long createdDate = cursor.getLong(1);
-                String content = queryNoteContent(resolver, noteId);
-                if (TextUtils.isEmpty(content)) {
-                    continue;
-                }
-                entries.add(new MemoryEntry(noteId, createdDate, content));
+                entries.add(new MemoryEntry(noteId, createdDate, ""));
             }
         } finally {
             cursor.close();
@@ -156,7 +168,7 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     }
 
     private void showAddDialog() {
-        if (mLoading) {
+        if (mLoading || mBrowseLoading) {
             Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -235,7 +247,7 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     }
 
     private void browseMemory() {
-        if (mLoading) {
+        if (mLoading || mBrowseLoading) {
             Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -276,18 +288,22 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     private void showRandomEntry() {
         int index = sRandom.nextInt(sRemainingEntries.size());
         MemoryEntry entry = sRemainingEntries.remove(index);
-        String message = formatEntryMessage(entry);
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.memory_bottle_title)
-                .setMessage(message)
-                .setPositiveButton(R.string.memory_bottle_close, null)
-                .show();
+        startBrowseTask(entry);
     }
 
-    private String formatEntryMessage(MemoryEntry entry) {
+    private void startBrowseTask(MemoryEntry entry) {
+        if (mBrowseTask != null) {
+            return;
+        }
+        setBrowseLoading(true);
+        mBrowseTask = new BrowseTask(this, entry);
+        mBrowseTask.execute();
+    }
+
+    private String formatEntryMessage(long createdDate, String content) {
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-        String date = format.format(new Date(entry.createdDate));
-        return getString(R.string.memory_bottle_entry_format, date, entry.content);
+        String date = format.format(new Date(createdDate));
+        return getString(R.string.memory_bottle_entry_format, date, content);
     }
 
     private long ensureMemoryFolder() {
@@ -433,6 +449,61 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             sAllEntries.addAll(result.entries);
             sRemainingEntries.clear();
             sRemainingEntries.addAll(result.entries);
+        }
+    }
+
+    private static final class BrowseResult {
+        private final MemoryEntry entry;
+        private final String content;
+
+        private BrowseResult(MemoryEntry entry, String content) {
+            this.entry = entry;
+            this.content = content;
+        }
+    }
+
+    private static final class BrowseTask extends AsyncTask<Void, Void, BrowseResult> {
+        private final WeakReference<MemoryBottleActivity> mRef;
+        private final MemoryEntry mEntry;
+
+        private BrowseTask(MemoryBottleActivity activity, MemoryEntry entry) {
+            mRef = new WeakReference<>(activity);
+            mEntry = entry;
+        }
+
+        @Override
+        protected BrowseResult doInBackground(Void... params) {
+            MemoryBottleActivity activity = mRef.get();
+            if (activity == null) {
+                return null;
+            }
+            String content = mEntry.content;
+            if (TextUtils.isEmpty(content)) {
+                content = activity.queryNoteContent(activity.getContentResolver(), mEntry.id);
+            }
+            if (TextUtils.isEmpty(content)) {
+                content = activity.getString(R.string.memory_bottle_missing_content);
+            }
+            return new BrowseResult(mEntry, content);
+        }
+
+        @Override
+        protected void onPostExecute(BrowseResult result) {
+            MemoryBottleActivity activity = mRef.get();
+            if (activity == null || activity.isFinishing()) {
+                return;
+            }
+            activity.mBrowseTask = null;
+            activity.setBrowseLoading(false);
+            if (result == null) {
+                return;
+            }
+            String message = activity.formatEntryMessage(result.entry.createdDate, result.content);
+            new AlertDialog.Builder(activity)
+                    .setTitle(R.string.memory_bottle_title)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.memory_bottle_close, null)
+                    .show();
         }
     }
 }

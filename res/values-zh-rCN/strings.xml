@@ -70,6 +70,7 @@
     <string name="memory_bottle_save_failed">保存失败，请重试</string>
     <string name="memory_bottle_folder_error">文件夹不可用，请重试</string>
     <string name="memory_bottle_loading">正在加载记忆...</string>
+    <string name="memory_bottle_missing_content">内容为空</string>
     <string name="memory_bottle_entry_format">创建日期：%1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">记忆漂流瓶</string>
     <string name="menu_list_mode">进入清单模式</string>
