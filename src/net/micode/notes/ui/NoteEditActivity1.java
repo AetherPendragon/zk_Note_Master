@@ -34,6 +34,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
@@ -138,6 +139,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private static final String TAG = "NoteEditActivity";
+    private static final int[] TEXT_COLOR_VALUES = new int[] {
+            Color.BLACK,
+            Color.RED,
+            Color.rgb(255, 140, 0),
+            Color.YELLOW,
+            Color.GREEN,
+            Color.BLUE,
+            Color.MAGENTA
+    };
 
     private HeadViewHolder mNoteHeaderHolder;
 
@@ -1229,6 +1239,13 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mNoteEditor.setPadding(10, 10, 10, 10); // 内边距
         mNoteEditor.setPlaceholder("请输入笔记内容..."); // 占位提示
         mNoteEditor.setInputEnabled(true); // 允许输入
+        mNoteEditor.setBackgroundColor(Color.TRANSPARENT);
+        mNoteEditor.getSettings().setAllowContentAccess(true);
+        mNoteEditor.getSettings().setAllowFileAccess(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            mNoteEditor.getSettings().setAllowFileAccessFromFileURLs(true);
+            mNoteEditor.getSettings().setAllowUniversalAccessFromFileURLs(true);
+        }
     }
     // 添加富文本功能按钮初始化方法
     private void initRichEditorButtons() {
@@ -1256,50 +1273,31 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         });
         
-        // 背景色功能
+        // 文字颜色功能
         findViewById(R.id.action_bg_color).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mNoteBgColorSelector.setVisibility(View.VISIBLE);
+                showTextColorDialog();
             }
         });
+    }
 
-        // 设置字体背景颜色
-        findViewById(R.id.action_bg_color).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mNoteEditor.focusEditor(); // 获取焦点
-                new AlertDialog.Builder(NoteEditActivity.this)
-                        .setTitle("选择字体背景颜色")
-                        .setSingleChoiceItems(R.array.text_bg_color, 0,
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        switch (which) {
-                                            case 0: // 红
-                                                mNoteEditor.setTextBackgroundColor(Color.RED);
-                                                break;
-                                            case 1: // 黄
-                                                mNoteEditor.setTextBackgroundColor(Color.YELLOW);
-                                                break;
-                                            case 2: // 蓝
-                                                mNoteEditor.setTextBackgroundColor(Color.BLUE);
-                                                break;
-                                            case 3: // 绿
-                                                mNoteEditor.setTextBackgroundColor(Color.GREEN);
-                                                break;
-                                            case 4: // 黑
-                                                mNoteEditor.setTextBackgroundColor(Color.BLACK);
-                                                break;
-                                            case 5: // 白
-                                                mNoteEditor.setTextBackgroundColor(Color.WHITE);
-                                                break;
-                                        }
-                                        dialog.dismiss(); // 选择后关闭对话框
-                                    }
-                                })
-                        .show();
-            }
-        });
+    private void showTextColorDialog() {
+        mNoteEditor.focusEditor();
+        String[] colorNames = getResources().getStringArray(R.array.text_color_names);
+        if (colorNames.length == 0) {
+            return;
+        }
+        new AlertDialog.Builder(NoteEditActivity.this)
+                .setTitle(R.string.text_color_title)
+                .setSingleChoiceItems(colorNames, 0, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        int index = Math.max(0, Math.min(which, TEXT_COLOR_VALUES.length - 1));
+                        mNoteEditor.setTextColor(TEXT_COLOR_VALUES[index]);
+                        dialog.dismiss();
+                    }
+                })
+                .show();
     }
 }

@@ -54,6 +54,7 @@
     <string name="menu_font_normal">正常</string>
     <string name="menu_font_large">大</string>
     <string name="menu_font_super">超大</string>
+    <string name="text_color_title">選擇文字顏色</string>
     <string name="menu_list_mode">進入清單模式</string>
     <string name="menu_normal_mode">退出清單模式</string>
     <string name="menu_folder_view">查看文件夾</string>
