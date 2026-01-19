@@ -1057,14 +1057,24 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     // ========== 新增：打开系统相册选择图片 ==========
     private void addPicture() {
         try {
-            // 意图：打开系统相册选择图片
-            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            Intent intent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+            } else {
+                intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            }
             intent.setType("image/*"); // 只显示图片类型
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            }
             startActivityForResult(intent, PHOTO_REQUEST); // 启动相册，等待返回结果
         } catch (ActivityNotFoundException e) {
             // 如果没有相册应用，尝试使用通用选择器
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.setType("image/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             try {
                 startActivityForResult(intent, PHOTO_REQUEST);
             } catch (ActivityNotFoundException ex) {
@@ -1082,6 +1092,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             if (uri == null) {
                 showToast(R.string.error_picture_select);
                 return;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                final int takeFlags = data.getFlags()
+                        & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                try {
+                    getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                } catch (SecurityException e) {
+                    Log.w(TAG, "Persistable uri permission not granted", e);
+                }
             }
             String localImagePath = saveImageToLocal(uri);
             if (TextUtils.isEmpty(localImagePath)) {
@@ -1290,6 +1309,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private void showTextColorDialog() {
         mNoteEditor.focusEditor();
+        mNoteEditor.loadUrl("javascript:RE.prepareInsert();");
         String[] colorNames = getResources().getStringArray(R.array.text_color_names);
         if (colorNames.length == 0) {
             return;
@@ -1311,8 +1331,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         if (mNoteEditor == null) {
             return;
         }
-        String hex = String.format("#%06X", (0xFFFFFF & color));
-        mNoteEditor.loadUrl("javascript:RE.setTextColor('" + hex + "')");
-        mNoteEditor.setTextColor(color);
+        mNoteEditor.focusEditor();
+        final String hex = String.format("#%06X", (0xFFFFFF & color));
+        mNoteEditor.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mNoteEditor.loadUrl("javascript:RE.restoreRange();");
+                mNoteEditor.loadUrl("javascript:RE.setTextColor('" + hex + "')");
+                mNoteEditor.setTextColor(color);
+            }
+        }, 60);
     }
 }
