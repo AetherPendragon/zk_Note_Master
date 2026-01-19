@@ -82,11 +82,13 @@
                 android:scrollbars="none"
                 android:overScrollMode="never"
                 android:layout_gravity="left|top"
-                android:fadingEdgeLength="0dip">
+                android:fadingEdgeLength="0dip"
+                android:fillViewport="true">
 
                 <LinearLayout
                     android:layout_width="fill_parent"
-                    android:layout_height="fill_parent">
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                     <jp.wasabeef.richeditor.RichEditor
                         android:id="@+id/note_edit_view"
@@ -97,6 +99,7 @@
                         android:autoLink="all"
                         android:linksClickable="false"
                         android:minLines="12"
+                        android:minHeight="160dp"
                         android:textAppearance="@style/TextAppearancePrimaryItem"
                         android:lineSpacingMultiplier="1.2" />
 
@@ -114,6 +117,64 @@
                 android:layout_width="fill_parent"
                 android:layout_height="7dip"
                 android:background="@drawable/bg_color_btn_mask" />
+
+            <!-- 横向滚动的富文本工具栏（放在编辑器下方） -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="#f5f5f5"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="8dp">
+
+                    <!-- 加粗按钮 -->
+                    <Button
+                        android:id="@+id/action_bold"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/action_bold"
+                        android:backgroundTint="@null"
+                        android:focusable="false"
+                        android:clickable="true"/>
+
+                    <!-- 斜体按钮 -->
+                    <Button
+                        android:id="@+id/action_italic"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/action_italic"
+                        android:backgroundTint="@null"
+                        android:focusable="false"
+                        android:clickable="true"/>
+
+                    <!-- 撤销按钮 -->
+                    <Button
+                        android:id="@+id/action_undo"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/action_undo"
+                        android:backgroundTint="@null"
+                        android:focusable="false"/>
+
+                    <!-- 文字背景色按钮 -->
+                    <Button
+                        android:id="@+id/action_bg_color"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/action_bg_color"
+                        android:backgroundTint="@null"
+                        android:focusable="false"/>
+
+                </LinearLayout>
+            </HorizontalScrollView>
         </LinearLayout>
     </LinearLayout>
 
@@ -390,62 +451,4 @@
                 android:src="@drawable/selected" />
         </FrameLayout>
     </LinearLayout>
-    <!-- 横向滚动的富文本工具栏（放在RichEditor下方） -->
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_gravity="bottom"
-        android:background="#f5f5f5"
-        android:scrollbars="none">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="8dp">
-
-        <!-- 加粗按钮 -->
-        <Button
-            android:id="@+id/action_bold"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="4dp"
-            android:background="@drawable/action_bold"
-            android:backgroundTint="@null"
-            android:focusable="false"
-            android:clickable="true"/>
-
-        <!-- 斜体按钮 -->
-        <Button
-            android:id="@+id/action_italic"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/action_italic"
-            android:backgroundTint="@null"
-            android:focusable="false"
-            android:clickable="true"/>
-
-        <!-- 可选：补充其他富文本按钮（如撤销、背景色），和你之前的功能对应 -->
-        <Button
-            android:id="@+id/action_undo"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/action_undo"
-        android:backgroundTint="@null"
-        android:focusable="false"/>
-
-        <Button
-            android:id="@+id/action_bg_color"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/action_bg_color"
-            android:backgroundTint="@null"
-            android:focusable="false"/>
-
-        </LinearLayout>
-    </HorizontalScrollView>
-
 </FrameLayout>
