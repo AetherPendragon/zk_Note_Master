@@ -48,11 +48,25 @@
             android:fadingEdge="@null" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btn_new_note"
-        android:background="@drawable/new_note"
+    <LinearLayout
+        android:id="@+id/note_list_actions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:focusable="false"
-        android:layout_gravity="bottom" />
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btn_memory_bottle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/memory_bottle_entry"
+            android:focusable="false" />
+
+        <Button
+            android:id="@+id/btn_new_note"
+            android:background="@drawable/new_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:focusable="false" />
+    </LinearLayout>
 </FrameLayout>

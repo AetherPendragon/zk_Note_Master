@@ -104,6 +104,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private ListView mNotesListView;
 
     private Button mAddNewNote;
+    private Button mMemoryBottle;
 
     private boolean mDispatch;
 
@@ -223,6 +224,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mAddNewNote = (Button) findViewById(R.id.btn_new_note);
         mAddNewNote.setOnClickListener(this);
         mAddNewNote.setOnTouchListener(new NewNoteOnTouchListener());
+        mMemoryBottle = (Button) findViewById(R.id.btn_memory_bottle);
+        mMemoryBottle.setOnClickListener(this);
         mDispatch = false;
         mDispatchY = 0;
         mOriginY = 0;
@@ -251,6 +254,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mNotesListAdapter.setChoiceMode(true);
             mNotesListView.setLongClickable(false);
             mAddNewNote.setVisibility(View.GONE);
+            if (mMemoryBottle != null) {
+                mMemoryBottle.setVisibility(View.GONE);
+            }
 
             View customView = LayoutInflater.from(NotesListActivity.this).inflate(
                     R.layout.note_list_dropdown_menu, null);
@@ -299,7 +305,12 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         public void onDestroyActionMode(ActionMode mode) {
             mNotesListAdapter.setChoiceMode(false);
             mNotesListView.setLongClickable(true);
-            mAddNewNote.setVisibility(View.VISIBLE);
+            if (mState == ListEditState.CALL_RECORD_FOLDER) {
+                mAddNewNote.setVisibility(View.GONE);
+            } else {
+                mAddNewNote.setVisibility(View.VISIBLE);
+            }
+            updateMemoryButtonVisibility();
         }
 
         public void finishActionMode() {
@@ -555,6 +566,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mTitleBar.setText(data.getSnippet());
         }
         mTitleBar.setVisibility(View.VISIBLE);
+        updateMemoryButtonVisibility();
     }
 
     public void onClick(View v) {
@@ -562,9 +574,28 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             case R.id.btn_new_note:
                 createNewNote();
                 break;
+            case R.id.btn_memory_bottle:
+                openMemoryBottle();
+                break;
             default:
                 break;
         }
+    }
+
+    private void updateMemoryButtonVisibility() {
+        if (mMemoryBottle == null) {
+            return;
+        }
+        if (mState == ListEditState.NOTE_LIST) {
+            mMemoryBottle.setVisibility(View.VISIBLE);
+        } else {
+            mMemoryBottle.setVisibility(View.GONE);
+        }
+    }
+
+    private void openMemoryBottle() {
+        Intent intent = new Intent(this, MemoryBottleActivity.class);
+        startActivity(intent);
     }
 
     private void showSoftInput() {
@@ -672,6 +703,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mState = ListEditState.NOTE_LIST;
                 startAsyncNotesListQuery();
                 mTitleBar.setVisibility(View.GONE);
+                updateMemoryButtonVisibility();
                 break;
             case CALL_RECORD_FOLDER:
                 mCurrentFolderId = Notes.ID_ROOT_FOLDER;
@@ -679,6 +711,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mAddNewNote.setVisibility(View.VISIBLE);
                 mTitleBar.setVisibility(View.GONE);
                 startAsyncNotesListQuery();
+                updateMemoryButtonVisibility();
                 break;
             case NOTE_LIST:
                 super.onBackPressed();

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@drawable/list_background">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_memory_title"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/title_bar_bg"
+            android:gravity="center_vertical"
+            android:singleLine="true"
+            android:text="@string/memory_bottle_title"
+            android:textColor="#FFEAD1AE"
+            android:textSize="@dimen/text_font_size_medium"
+            android:paddingLeft="12dip"
+            android:paddingRight="12dip"
+            android:paddingTop="8dip"
+            android:paddingBottom="8dip" />
+
+        <TextView
+            android:id="@+id/tv_memory_tip"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dip"
+            android:text="@string/memory_bottle_tip"
+            android:textAppearance="@style/TextAppearanceSecondaryItem" />
+
+        <View
+            android:layout_width="fill_parent"
+            android:layout_height="0dip"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dip">
+
+            <Button
+                android:id="@+id/btn_memory_add"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/memory_bottle_add" />
+
+            <Button
+                android:id="@+id/btn_memory_browse"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginLeft="8dip"
+                android:text="@string/memory_bottle_browse" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
