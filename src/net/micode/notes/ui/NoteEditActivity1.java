@@ -16,7 +16,6 @@
 
 package net.micode.notes.ui;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
@@ -34,24 +33,16 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
-import android.text.method.LinkMovementMethod;
 import android.text.style.BackgroundColorSpan;
-import android.text.style.ClickableSpan;
 import android.text.style.ImageSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -65,16 +56,11 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.content.FileProvider;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleObserver;
-import androidx.lifecycle.OnLifecycleEvent;
 
 import net.micode.notes.R;
 import net.micode.notes.data.Notes;
@@ -93,13 +79,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -335,33 +316,17 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             // 1. 获取笔记原始内容（为空则赋空字符串，避免空指针）
             String content = mWorkingNote.getContent() == null ? "" : mWorkingNote.getContent();
 
-            // 2. 检查内容是否已经是HTML格式，如果是则直接加载
-            String finalHtml = content;
-            
-            // 3. 如果内容不是HTML格式（比如旧笔记），则处理图片标记
-            if (!TextUtils.isEmpty(content) && (!content.startsWith("<") || !content.contains("</"))) {
-                // 正则匹配【图】+本地路径格式（兼容换行/非换行场景）
-                Pattern imgPattern = Pattern.compile("【图】([^\\n]+)");
-                Matcher imgMatcher = imgPattern.matcher(content);
-                StringBuffer htmlContent = new StringBuffer();
-                // 遍历替换所有【图】标记为<img>标签
-                while (imgMatcher.find()) {
-                    String imgLocalPath = imgMatcher.group(1); // 提取图片本地路径
-                    // 检查图片文件是否存在
-                    File imgFile = new File(imgLocalPath);
-                    if (imgFile.exists() && imgFile.isFile()) {
-                        String imgHtmlUrl = "file://" + imgLocalPath; // 必须加file://前缀
-                        // 拼接标准<img>标签（固定宽高，避免图片变形）
-                        String imgHtmlTag = "<img src=\"" + imgHtmlUrl + "\" width=\"200\" height=\"200\"/><br/>";
-                        // 替换匹配到的【图】标记
-                        imgMatcher.appendReplacement(htmlContent, imgHtmlTag);
-                    }
-                }
-                imgMatcher.appendTail(htmlContent); // 拼接剩余文本
-                finalHtml = htmlContent.toString();
+            // 2. 旧文本（非 HTML）转换为 HTML，确保图片与换行能正确展示
+            String finalHtml;
+            if (TextUtils.isEmpty(content)) {
+                finalHtml = "";
+            } else if (isHtmlContent(content)) {
+                finalHtml = content;
+            } else {
+                finalHtml = convertLegacyContentToHtml(content);
             }
 
-            // 4. 核心：用RichEditor加载HTML内容
+            // 3. 核心：用 RichEditor 加载 HTML 内容
             mNoteEditor.setHtml(finalHtml);
         }
         
@@ -479,8 +444,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mNoteEditor.setOnTextChangeListener(new RichEditor.OnTextChangeListener() {
             @Override
             public void onTextChange(String text) {
-                mText = text;
-                mNoteLength = text.length();
+                String safeText = text == null ? "" : text;
+                mText = safeText;
+                mNoteLength = safeText.length();
                 // 更新修改时间和字符数显示
                 mNoteHeaderHolder.tvModified.setText(
                         DateUtils.formatDateTime(NoteEditActivity.this,
@@ -867,10 +833,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         }
 
-        Pattern imagePattern = Pattern.compile("【图片】([^\\n]+)");
+        Pattern imagePattern = Pattern.compile("【图】([^\\n]+)");
         Matcher imageMatcher = imagePattern.matcher(spannable);
-        // 新增：使用软引用存储 Bitmap，避免 OOM
-        List<Bitmap> bitmapCache = new ArrayList<>();
         while (imageMatcher.find()) {
             try {
                 // 修复1：判空避免trim()空指针
@@ -907,10 +871,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                         imageMatcher.end(),
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-                // 修复3：使用完回收Bitmap（避免内存泄漏）
-                if (bitmap != null && !bitmap.isRecycled()) {
-                    bitmap.recycle();
-                }
             } catch (Exception e) {
                 Log.e(TAG, "解析图片失败", e);
                 continue;
@@ -1013,7 +973,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mWorkingNote.setWorkingText(sb.toString());
         } else {
             // 确保获取最新的富文本内容
-            String currentHtml = mNoteEditor.getHtml();
+            String currentHtml = normalizeEditorHtml(mNoteEditor.getHtml());
             mWorkingNote.setWorkingText(currentHtml);
             mText = currentHtml; // 更新mText变量，确保保存时使用最新内容
         }
@@ -1106,20 +1066,18 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
             Uri uri = data.getData();
+            if (uri == null) {
+                showToast(R.string.error_picture_select);
+                return;
+            }
             String localImagePath = saveImageToLocal(uri);
-            if (localImagePath == null) return; // 保存失败就退出
+            if (TextUtils.isEmpty(localImagePath)) {
+                return; // 保存失败就退出
+            }
 
-            // 给原生EditText插入文字
-            // ========== 核心修改：适配RichEditor，替换EditText的ImageSpan逻辑 ==========
-            // 1. 拼接RichEditor支持的<img>标签（必须加file://前缀）
-            String imgUrl = "file://" + localImagePath;
-            String imgHtmlTag = "<img src=\"" + imgUrl + "\" width=\"200\" height=\"200\"/><br/>";
-            // 2. 插入图片到RichEditor（替代insertHtml()
-            String curHtml = mNoteEditor.getHtml(); // 获取当前内容
-            String newHtml = curHtml + imgHtmlTag;  // 追加图片标签
-            mNoteEditor.setHtml(newHtml);              // 重新设置内容，实现插入
+            insertImageToEditor(localImagePath);
 
-            // 弹窗依然保留
+            // 弹窗保留，用于预览与确认保存
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("图片选择成功！");
 
@@ -1127,27 +1085,19 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             imageView.setLayoutParams(new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT)); // 加布局参数，避免图片显示不全
-            imageView.setImageURI(Uri.fromFile(new File(localImagePath)));//弹窗也显示本地图片（替换原来的setImageURI(uri)）
+            imageView.setImageURI(Uri.fromFile(new File(localImagePath)));
             imageView.setScaleType(ImageView.ScaleType.FIT_CENTER); // 适配图片大小
             builder.setView(imageView);
 
             builder.setPositiveButton("确认保存", (dialog, which) -> {
-                String currentHtml = mNoteEditor.getHtml(); // 替换原EditText的getText()
-                String newContent = mWorkingNote.getContent() == null ? "" : mWorkingNote.getContent();
-                newContent += "\n【图】" + localImagePath; // 保留原有【图】标记，供后续加载解析
-                Log.d("NoteDebug", "准备保存的内容：" + newContent); // 看Logcat里的输出
-
-                // 执行保存操作
-                mWorkingNote.setWorkingText(newContent);
-                boolean isSaved = mWorkingNote.saveNote();
-
-                // 根据保存结果提示（更友好）
+                boolean isSaved = saveNote();
                 if (isSaved) {
                     Toast.makeText(this, "图片信息已保存！", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
                 }
             });
+            builder.setNegativeButton(android.R.string.cancel, null);
 
             builder.show();
         }
@@ -1156,24 +1106,35 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     // 新增工具方法：把临时URI的图片复制到应用私有目录，返回真实路径
     private String saveImageToLocal(Uri uri) {
         try {
-            // 1. 创建应用专属图片目录（不会被系统清理）
-            File appDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "note_images");
-            if (!appDir.exists()) appDir.mkdirs();
+            File baseDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+            if (baseDir == null) {
+                baseDir = getFilesDir();
+            }
+            File appDir = new File(baseDir, "note_images");
+            if (!appDir.exists() && !appDir.mkdirs()) {
+                Log.e("NoteEdit", "创建图片目录失败: " + appDir.getAbsolutePath());
+                Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
+                return null;
+            }
 
             // 2. 生成唯一文件名（避免重复）
             String fileName = "note_" + System.currentTimeMillis() + ".jpg";
             File targetFile = new File(appDir, fileName);
 
             // 3. 复制图片文件（从临时URI到本地目录）
-            InputStream is = getContentResolver().openInputStream(uri);
-            OutputStream os = new FileOutputStream(targetFile);
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = is.read(buffer)) > 0) {
-                os.write(buffer, 0, len);
+            try (InputStream is = getContentResolver().openInputStream(uri);
+                 OutputStream os = new FileOutputStream(targetFile)) {
+                if (is == null) {
+                    Log.e("NoteEdit", "无法读取图片流: " + uri);
+                    Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = is.read(buffer)) > 0) {
+                    os.write(buffer, 0, len);
+                }
             }
-            is.close();
-            os.close();
 
             // 返回图片的真实本地路径（不是URI）
             return targetFile.getAbsolutePath();
@@ -1182,6 +1143,65 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
             return null;
         }
+    }
+
+    private void insertImageToEditor(String localImagePath) {
+        if (mNoteEditor == null) {
+            return;
+        }
+        String imgHtmlTag = buildImageHtmlTag(localImagePath);
+        String curHtml = normalizeEditorHtml(mNoteEditor.getHtml());
+        mNoteEditor.setHtml(curHtml + imgHtmlTag);
+        mNoteEditor.focusEditor();
+    }
+
+    private String buildImageHtmlTag(String localImagePath) {
+        String imgUrl = Uri.fromFile(new File(localImagePath)).toString();
+        return "<img src=\"" + imgUrl + "\" width=\"200\" height=\"200\"/><br/>";
+    }
+
+    private String normalizeEditorHtml(String html) {
+        if (TextUtils.isEmpty(html) || "null".equalsIgnoreCase(html)) {
+            return "";
+        }
+        return html;
+    }
+
+    private boolean isHtmlContent(String content) {
+        if (TextUtils.isEmpty(content)) {
+            return false;
+        }
+        return content.contains("<img")
+                || content.contains("<p")
+                || content.contains("<div")
+                || content.contains("<br")
+                || content.contains("</");
+    }
+
+    private String convertLegacyContentToHtml(String content) {
+        String normalized = content.replace("\r\n", "\n").replace("\r", "\n");
+        Pattern imgPattern = Pattern.compile("【图】([^\\n]+)");
+        Matcher imgMatcher = imgPattern.matcher(normalized);
+        StringBuilder htmlContent = new StringBuilder();
+        int lastEnd = 0;
+        while (imgMatcher.find()) {
+            String beforeText = normalized.substring(lastEnd, imgMatcher.start());
+            htmlContent.append(TextUtils.htmlEncode(beforeText));
+
+            String imgLocalPath = imgMatcher.group(1);
+            if (!TextUtils.isEmpty(imgLocalPath)) {
+                imgLocalPath = imgLocalPath.trim();
+                File imgFile = new File(imgLocalPath);
+                if (imgFile.exists() && imgFile.isFile()) {
+                    htmlContent.append(buildImageHtmlTag(imgLocalPath));
+                } else {
+                    htmlContent.append(TextUtils.htmlEncode(imgMatcher.group(0)));
+                }
+            }
+            lastEnd = imgMatcher.end();
+        }
+        htmlContent.append(TextUtils.htmlEncode(normalized.substring(lastEnd)));
+        return htmlContent.toString().replace("\n", "<br/>");
     }
     // 自定义方法：给RichEditor设置字体大小（对应原EditText的setTextAppearance）
     private void setRichEditorFontSize(int fontSizeId) {

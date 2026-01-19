@@ -57,6 +57,7 @@
                 android:textAppearance="@style/TextAppearanceSecondaryItem" />
 
             <ImageButton
+                android:id="@+id/btn_set_bg_color"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
@@ -115,14 +116,6 @@
                 android:background="@drawable/bg_color_btn_mask" />
         </LinearLayout>
     </LinearLayout>
-
-    <!-- 背景颜色设置按钮 -->
-    <ImageView
-        android:id="@+id/btn_set_bg_color"
-        android:layout_height="43dip"
-        android:layout_width="wrap_content"
-        android:background="@drawable/bg_color_btn_mask"
-        android:layout_gravity="top|right" />
 
     <!-- 背景颜色选择器 -->
     <LinearLayout
@@ -455,10 +448,4 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- 富文本编辑器（和工具栏配套） -->
-    <jp.wasabeef.richeditor.RichEditor
-        android:id="@+id/note_edit_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@null"/>
 </FrameLayout>
