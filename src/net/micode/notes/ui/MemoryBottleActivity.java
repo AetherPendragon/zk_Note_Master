@@ -26,6 +26,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.InputType;
@@ -46,6 +47,7 @@ import net.micode.notes.model.WorkingNote;
 import net.micode.notes.tool.DataUtils;
 import net.micode.notes.tool.ResourceParser;
 
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -65,14 +67,15 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     private Button mAddButton;
     private Button mBrowseButton;
     private long mMemoryFolderId;
+    private boolean mLoading;
+    private LoadTask mLoadTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.memory_bottle);
         initResources();
-        mMemoryFolderId = ensureMemoryFolder();
-        loadEntriesIfNeeded();
+        startLoadTask();
     }
 
     private void initResources() {
@@ -96,36 +99,45 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
         }
     }
 
-    private void loadEntriesIfNeeded() {
-        if (mMemoryFolderId <= 0) {
-            return;
+    @Override
+    protected void onDestroy() {
+        if (mLoadTask != null) {
+            mLoadTask.cancel(true);
+            mLoadTask = null;
         }
-        if (sFolderId != mMemoryFolderId) {
-            sFolderId = mMemoryFolderId;
-            sAllEntries.clear();
-            sRemainingEntries.clear();
-        }
-        if (!sAllEntries.isEmpty()) {
-            return;
-        }
-        loadEntriesFromDatabase();
+        super.onDestroy();
     }
 
-    private void loadEntriesFromDatabase() {
-        if (mMemoryFolderId <= 0) {
+    private void startLoadTask() {
+        if (mLoadTask != null) {
             return;
         }
-        sAllEntries.clear();
-        sRemainingEntries.clear();
+        setLoading(true);
+        mLoadTask = new LoadTask(this);
+        mLoadTask.execute();
+    }
+
+    private void setLoading(boolean loading) {
+        mLoading = loading;
+        if (mAddButton != null) {
+            mAddButton.setEnabled(!loading);
+        }
+        if (mBrowseButton != null) {
+            mBrowseButton.setEnabled(!loading);
+        }
+    }
+
+    private List<MemoryEntry> loadEntriesFromDatabase(long folderId) {
+        List<MemoryEntry> entries = new ArrayList<>();
         ContentResolver resolver = getContentResolver();
         Cursor cursor = resolver.query(
                 Notes.CONTENT_NOTE_URI,
                 new String[] { NoteColumns.ID, NoteColumns.CREATED_DATE },
                 NoteColumns.TYPE + "=? AND " + NoteColumns.PARENT_ID + "=?",
-                new String[] { String.valueOf(Notes.TYPE_NOTE), String.valueOf(mMemoryFolderId) },
+                new String[] { String.valueOf(Notes.TYPE_NOTE), String.valueOf(folderId) },
                 NoteColumns.CREATED_DATE + " DESC");
         if (cursor == null) {
-            return;
+            return entries;
         }
         try {
             while (cursor.moveToNext()) {
@@ -135,16 +147,23 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
                 if (TextUtils.isEmpty(content)) {
                     continue;
                 }
-                MemoryEntry entry = new MemoryEntry(noteId, createdDate, content);
-                sAllEntries.add(entry);
-                sRemainingEntries.add(entry);
+                entries.add(new MemoryEntry(noteId, createdDate, content));
             }
         } finally {
             cursor.close();
         }
+        return entries;
     }
 
     private void showAddDialog() {
+        if (mLoading) {
+            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (mMemoryFolderId <= 0) {
+            Toast.makeText(this, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
+            return;
+        }
         final EditText editText = new EditText(this);
         int padding = (int) (getResources().getDisplayMetrics().density * 16);
         editText.setPadding(padding, padding, padding, padding);
@@ -216,6 +235,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     }
 
     private void browseMemory() {
+        if (mLoading) {
+            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (mMemoryFolderId <= 0) {
             Toast.makeText(this, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
             return;
@@ -285,7 +308,6 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             sp.edit().putLong(PREF_MEMORY_FOLDER_ID, folderId).commit();
             return folderId;
         }
-        Toast.makeText(this, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
         return -1;
     }
 
@@ -359,6 +381,58 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             this.id = id;
             this.createdDate = createdDate;
             this.content = content;
+        }
+    }
+
+    private static final class LoadResult {
+        private final long folderId;
+        private final List<MemoryEntry> entries;
+
+        private LoadResult(long folderId, List<MemoryEntry> entries) {
+            this.folderId = folderId;
+            this.entries = entries;
+        }
+    }
+
+    private static final class LoadTask extends AsyncTask<Void, Void, LoadResult> {
+        private final WeakReference<MemoryBottleActivity> mRef;
+
+        private LoadTask(MemoryBottleActivity activity) {
+            mRef = new WeakReference<>(activity);
+        }
+
+        @Override
+        protected LoadResult doInBackground(Void... params) {
+            MemoryBottleActivity activity = mRef.get();
+            if (activity == null) {
+                return null;
+            }
+            long folderId = activity.ensureMemoryFolder();
+            List<MemoryEntry> entries = new ArrayList<>();
+            if (folderId > 0) {
+                entries = activity.loadEntriesFromDatabase(folderId);
+            }
+            return new LoadResult(folderId, entries);
+        }
+
+        @Override
+        protected void onPostExecute(LoadResult result) {
+            MemoryBottleActivity activity = mRef.get();
+            if (activity == null || activity.isFinishing()) {
+                return;
+            }
+            activity.mLoadTask = null;
+            activity.setLoading(false);
+            if (result == null || result.folderId <= 0) {
+                Toast.makeText(activity, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            activity.mMemoryFolderId = result.folderId;
+            sFolderId = result.folderId;
+            sAllEntries.clear();
+            sAllEntries.addAll(result.entries);
+            sRemainingEntries.clear();
+            sRemainingEntries.addAll(result.entries);
         }
     }
 }
