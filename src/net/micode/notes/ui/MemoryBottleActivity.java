@@ -71,13 +71,16 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     private LoadTask mLoadTask;
     private boolean mBrowseLoading;
     private BrowseTask mBrowseTask;
+    private boolean mEntriesLoaded;
+    private PendingAction mPendingAction = PendingAction.NONE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.memory_bottle);
         initResources();
-        startLoadTask();
+        mMemoryFolderId = -1;
+        mEntriesLoaded = false;
     }
 
     private void initResources() {
@@ -91,10 +94,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_memory_add:
-                showAddDialog();
+                requestAction(PendingAction.ADD);
                 break;
             case R.id.btn_memory_browse:
-                browseMemory();
+                requestAction(PendingAction.BROWSE);
                 break;
             default:
                 break;
@@ -114,12 +117,12 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
         super.onDestroy();
     }
 
-    private void startLoadTask() {
+    private void startLoadTask(boolean loadEntries) {
         if (mLoadTask != null) {
             return;
         }
         setLoading(true);
-        mLoadTask = new LoadTask(this);
+        mLoadTask = new LoadTask(this, loadEntries);
         mLoadTask.execute();
     }
 
@@ -168,14 +171,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     }
 
     private void showAddDialog() {
-        if (mLoading || mBrowseLoading) {
-            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (mMemoryFolderId <= 0) {
-            Toast.makeText(this, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
-            return;
-        }
+        showAddDialogInternal();
+    }
+
+    private void showAddDialogInternal() {
         final EditText editText = new EditText(this);
         int padding = (int) (getResources().getDisplayMetrics().density * 16);
         editText.setPadding(padding, padding, padding, padding);
@@ -247,14 +246,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     }
 
     private void browseMemory() {
-        if (mLoading || mBrowseLoading) {
-            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (mMemoryFolderId <= 0) {
-            Toast.makeText(this, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
-            return;
-        }
+        browseMemoryInternal();
+    }
+
+    private void browseMemoryInternal() {
         if (sAllEntries.isEmpty()) {
             Toast.makeText(this, R.string.memory_bottle_empty, Toast.LENGTH_SHORT).show();
             return;
@@ -304,6 +299,30 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
         String date = format.format(new Date(createdDate));
         return getString(R.string.memory_bottle_entry_format, date, content);
+    }
+
+    private void requestAction(PendingAction action) {
+        if (mLoading || mBrowseLoading) {
+            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (mMemoryFolderId <= 0) {
+            mPendingAction = action;
+            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
+            startLoadTask(action == PendingAction.BROWSE);
+            return;
+        }
+        if (action == PendingAction.BROWSE && !mEntriesLoaded) {
+            mPendingAction = action;
+            Toast.makeText(this, R.string.memory_bottle_loading, Toast.LENGTH_SHORT).show();
+            startLoadTask(true);
+            return;
+        }
+        if (action == PendingAction.ADD) {
+            showAddDialog();
+        } else if (action == PendingAction.BROWSE) {
+            browseMemory();
+        }
     }
 
     private long ensureMemoryFolder() {
@@ -403,18 +422,22 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
     private static final class LoadResult {
         private final long folderId;
         private final List<MemoryEntry> entries;
+        private final boolean loadedEntries;
 
-        private LoadResult(long folderId, List<MemoryEntry> entries) {
+        private LoadResult(long folderId, List<MemoryEntry> entries, boolean loadedEntries) {
             this.folderId = folderId;
             this.entries = entries;
+            this.loadedEntries = loadedEntries;
         }
     }
 
     private static final class LoadTask extends AsyncTask<Void, Void, LoadResult> {
         private final WeakReference<MemoryBottleActivity> mRef;
+        private final boolean mLoadEntries;
 
-        private LoadTask(MemoryBottleActivity activity) {
+        private LoadTask(MemoryBottleActivity activity, boolean loadEntries) {
             mRef = new WeakReference<>(activity);
+            mLoadEntries = loadEntries;
         }
 
         @Override
@@ -425,10 +448,10 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             }
             long folderId = activity.ensureMemoryFolder();
             List<MemoryEntry> entries = new ArrayList<>();
-            if (folderId > 0) {
+            if (folderId > 0 && mLoadEntries) {
                 entries = activity.loadEntriesFromDatabase(folderId);
             }
-            return new LoadResult(folderId, entries);
+            return new LoadResult(folderId, entries, mLoadEntries);
         }
 
         @Override
@@ -441,14 +464,27 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
             activity.setLoading(false);
             if (result == null || result.folderId <= 0) {
                 Toast.makeText(activity, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
+                activity.mPendingAction = PendingAction.NONE;
                 return;
             }
             activity.mMemoryFolderId = result.folderId;
             sFolderId = result.folderId;
-            sAllEntries.clear();
-            sAllEntries.addAll(result.entries);
-            sRemainingEntries.clear();
-            sRemainingEntries.addAll(result.entries);
+            if (result.loadedEntries) {
+                sAllEntries.clear();
+                sAllEntries.addAll(result.entries);
+                sRemainingEntries.clear();
+                sRemainingEntries.addAll(result.entries);
+                activity.mEntriesLoaded = true;
+            } else if (sFolderId == result.folderId) {
+                activity.mEntriesLoaded = !sAllEntries.isEmpty();
+            }
+            PendingAction pending = activity.mPendingAction;
+            activity.mPendingAction = PendingAction.NONE;
+            if (pending == PendingAction.ADD) {
+                activity.showAddDialogInternal();
+            } else if (pending == PendingAction.BROWSE) {
+                activity.browseMemoryInternal();
+            }
         }
     }
 
@@ -505,5 +541,11 @@ public class MemoryBottleActivity extends Activity implements View.OnClickListen
                     .setPositiveButton(R.string.memory_bottle_close, null)
                     .show();
         }
+    }
+
+    private enum PendingAction {
+        NONE,
+        ADD,
+        BROWSE
     }
 }
