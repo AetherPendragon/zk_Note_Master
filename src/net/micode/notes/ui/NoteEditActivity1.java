@@ -46,7 +46,6 @@ import android.text.format.DateUtils;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ImageSpan;
 import android.util.Log;
-import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -141,8 +140,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private static final String TAG = "NoteEditActivity";
-    private static final int ACTION_MODE_ITEM_UNDERLINE = 1001;
-    private static final int ACTION_MODE_ITEM_TEXT_COLOR = 1002;
     private static final int[] TEXT_COLOR_VALUES = new int[] {
             Color.BLACK,
             Color.RED,
@@ -1296,7 +1293,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mNoteEditor.getSettings().setAllowUniversalAccessFromFileURLs(true);
         }
         injectSelectionHelperIfNeeded();
-        setupSelectionActionMode();
     }
     // 添加富文本功能按钮初始化方法
     private void initRichEditorButtons() {
@@ -1326,77 +1322,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     }
 
-    private void showTextColorDialog(final ActionMode mode) {
-        String[] colorNames = getResources().getStringArray(R.array.text_color_names);
-        if (colorNames.length == 0) {
-            return;
-        }
-        new AlertDialog.Builder(NoteEditActivity.this)
-                .setTitle(R.string.text_color_title)
-                .setSingleChoiceItems(colorNames, 0, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        int index = Math.max(0, Math.min(which, TEXT_COLOR_VALUES.length - 1));
-                        applyTextColor(TEXT_COLOR_VALUES[index]);
-                        if (mode != null) {
-                            mode.finish();
-                        }
-                        dialog.dismiss();
-                    }
-                })
-                .show();
-    }
-
-    private void applyTextColor(int color) {
-        final String hex = String.format("#%06X", (0xFFFFFF & color));
-        applySelectionCommand(
-                "if (window.RE && RE.setTextColor) { RE.setTextColor('" + hex + "'); } "
-                        + "else { document.execCommand('foreColor', false, '" + hex + "'); }");
-    }
-
-    private void applyUnderline() {
-        applySelectionCommand(
-                "if (window.RE && RE.setUnderline) { RE.setUnderline(); } "
-                        + "else { document.execCommand('underline', false, null); }");
-    }
-
-    private void setupSelectionActionMode() {
-        mNoteEditor.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
-            @Override
-            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                MenuItem underlineItem = menu.add(0, ACTION_MODE_ITEM_UNDERLINE, 0,
-                        R.string.menu_underline);
-                underlineItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                MenuItem colorItem = menu.add(0, ACTION_MODE_ITEM_TEXT_COLOR, 1,
-                        R.string.menu_text_color);
-                colorItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-                return true;
-            }
-
-            @Override
-            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                return false;
-            }
-
-            @Override
-            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                prepareSelectionRange();
-                if (item.getItemId() == ACTION_MODE_ITEM_UNDERLINE) {
-                    applyUnderline();
-                    mode.finish();
-                    return true;
-                } else if (item.getItemId() == ACTION_MODE_ITEM_TEXT_COLOR) {
-                    showTextColorDialog(mode);
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public void onDestroyActionMode(ActionMode mode) {
-            }
-        });
-    }
 
     private void prepareSelectionRange() {
         if (mNoteEditor == null) {
@@ -1429,7 +1354,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             return;
         }
         runEditorScript("(function(){"
-                + "if (window.notesSaveRange) { return; }"
+                + "if (window.notesToolbarInjected) { return; }"
+                + "window.notesToolbarInjected = true;"
                 + "window.notesSelection = null;"
                 + "window.notesSaveRange = function(force){"
                 + "  var sel = window.getSelection && window.getSelection();"
@@ -1438,6 +1364,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 + "  if (force || !range.collapsed) {"
                 + "    window.notesSelection = range;"
                 + "  }"
+                + "  if (window.notesUpdateToolbar) { window.notesUpdateToolbar(range); }"
                 + "};"
                 + "window.notesRestoreRange = function(){"
                 + "  var sel = window.getSelection && window.getSelection();"
@@ -1446,9 +1373,52 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 + "    sel.addRange(window.notesSelection);"
                 + "  }"
                 + "};"
-                + "document.addEventListener('selectionchange', function(){"
-                + "  window.notesSaveRange(false);"
-                + "});"
+                + "var buildToolbar = function(){"
+                + "  if (!document.body) { setTimeout(buildToolbar, 50); return; }"
+                + "  var toolbar = document.createElement('div');"
+                + "  toolbar.id = 'notes-toolbar';"
+                + "  toolbar.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);"
+                + "background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px 8px;display:none;"
+                + "z-index:9999;box-shadow:0 2px 6px rgba(0,0,0,0.2);';"
+                + "  var underlineBtn = document.createElement('button');"
+                + "  underlineBtn.textContent = 'U';"
+                + "  underlineBtn.style.cssText = 'font-weight:bold;margin-right:6px;border:0;background:#f5f5f5;"
+                + "padding:4px 8px;border-radius:4px;';"
+                + "  underlineBtn.onmousedown = function(e){"
+                + "    e.preventDefault(); e.stopPropagation();"
+                + "    if (window.notesRestoreRange) { notesRestoreRange(); }"
+                + "    document.execCommand('underline', false, null);"
+                + "    return false;"
+                + "  };"
+                + "  toolbar.appendChild(underlineBtn);"
+                + "  var colors = ['#000000','#ff0000','#ff8c00','#ffff00','#00aa00','#0000ff','#800080'];"
+                + "  var palette = document.createElement('span');"
+                + "  colors.forEach(function(c){"
+                + "    var dot = document.createElement('span');"
+                + "    dot.style.cssText = 'display:inline-block;width:16px;height:16px;border-radius:8px;"
+                + "margin:0 3px;background:' + c + ';border:1px solid #999;';"
+                + "    dot.onmousedown = function(e){"
+                + "      e.preventDefault(); e.stopPropagation();"
+                + "      if (window.notesRestoreRange) { notesRestoreRange(); }"
+                + "      document.execCommand('foreColor', false, c);"
+                + "      return false;"
+                + "    };"
+                + "    palette.appendChild(dot);"
+                + "  });"
+                + "  toolbar.appendChild(palette);"
+                + "  document.body.appendChild(toolbar);"
+                + "  window.notesUpdateToolbar = function(range){"
+                + "    if (!range || range.collapsed) { toolbar.style.display = 'none'; return; }"
+                + "    toolbar.style.display = 'block';"
+                + "  };"
+                + "  document.addEventListener('selectionchange', function(){"
+                + "    window.notesSaveRange(false);"
+                + "  });"
+                + "  document.addEventListener('touchstart', function(e){"
+                + "    if (!toolbar.contains(e.target)) { toolbar.style.display = 'none'; }"
+                + "  }, true);"
+                + "};"
+                + "buildToolbar();"
                 + "})();");
         mSelectionHelperInjected = true;
     }
