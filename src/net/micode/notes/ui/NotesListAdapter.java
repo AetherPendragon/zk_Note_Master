@@ -37,6 +37,7 @@ public class NotesListAdapter extends CursorAdapter {
     private HashMap<Integer, Boolean> mSelectedIndex;
     private int mNotesCount;
     private boolean mChoiceMode;
+    private boolean mIncludeFolders;
 
     public static class AppWidgetAttribute {
         public int widgetId;
@@ -76,13 +77,21 @@ public class NotesListAdapter extends CursorAdapter {
     public void setChoiceMode(boolean mode) {
         mSelectedIndex.clear();
         mChoiceMode = mode;
+        mIncludeFolders = false;
+    }
+
+    public void setChoiceMode(boolean mode, boolean includeFolders) {
+        mSelectedIndex.clear();
+        mChoiceMode = mode;
+        mIncludeFolders = includeFolders;
     }
 
     public void selectAll(boolean checked) {
         Cursor cursor = getCursor();
         for (int i = 0; i < getCount(); i++) {
             if (cursor.moveToPosition(i)) {
-                if (NoteItemData.getNoteType(cursor) == Notes.TYPE_NOTE) {
+                int type = NoteItemData.getNoteType(cursor);
+                if (type == Notes.TYPE_NOTE || (mIncludeFolders && type == Notes.TYPE_FOLDER)) {
                     setCheckedItem(i, checked);
                 }
             }

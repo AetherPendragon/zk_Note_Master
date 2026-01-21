@@ -77,6 +77,7 @@ public class DataUtils {
         values.put(NoteColumns.PARENT_ID, desFolderId);
         values.put(NoteColumns.ORIGIN_PARENT_ID, srcFolderId);
         values.put(NoteColumns.LOCAL_MODIFIED, 1);
+        values.put(NoteColumns.MODIFIED_DATE, System.currentTimeMillis());
         resolver.update(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id), values, null, null);
     }
 
@@ -93,6 +94,7 @@ public class DataUtils {
                     .newUpdate(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id));
             builder.withValue(NoteColumns.PARENT_ID, folderId);
             builder.withValue(NoteColumns.LOCAL_MODIFIED, 1);
+            builder.withValue(NoteColumns.MODIFIED_DATE, System.currentTimeMillis());
             operationList.add(builder.build());
         }
 
@@ -109,6 +111,49 @@ public class DataUtils {
             Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
         }
         return false;
+    }
+
+    public static boolean batchMoveToTrash(ContentResolver resolver, HashSet<Long> ids,
+            long originFolderId) {
+        if (ids == null) {
+            Log.d(TAG, "the ids is null");
+            return true;
+        }
+        ArrayList<ContentProviderOperation> operationList = new ArrayList<ContentProviderOperation>();
+        long now = System.currentTimeMillis();
+        for (long id : ids) {
+            ContentProviderOperation.Builder builder = ContentProviderOperation
+                    .newUpdate(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id));
+            builder.withValue(NoteColumns.PARENT_ID, Notes.ID_TRASH_FOLER);
+            builder.withValue(NoteColumns.ORIGIN_PARENT_ID, originFolderId);
+            builder.withValue(NoteColumns.LOCAL_MODIFIED, 1);
+            builder.withValue(NoteColumns.MODIFIED_DATE, now);
+            operationList.add(builder.build());
+        }
+        try {
+            ContentProviderResult[] results = resolver.applyBatch(Notes.AUTHORITY, operationList);
+            if (results == null || results.length == 0 || results[0] == null) {
+                Log.d(TAG, "move to trash failed, ids:" + ids.toString());
+                return false;
+            }
+            return true;
+        } catch (RemoteException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        } catch (OperationApplicationException e) {
+            Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+        }
+        return false;
+    }
+
+    public static void moveNotesToTrashForFolder(ContentResolver resolver, long folderId) {
+        ContentValues values = new ContentValues();
+        values.put(NoteColumns.PARENT_ID, Notes.ID_TRASH_FOLER);
+        values.put(NoteColumns.ORIGIN_PARENT_ID, folderId);
+        values.put(NoteColumns.LOCAL_MODIFIED, 1);
+        values.put(NoteColumns.MODIFIED_DATE, System.currentTimeMillis());
+        resolver.update(Notes.CONTENT_NOTE_URI, values,
+                NoteColumns.PARENT_ID + "=?",
+                new String[] { String.valueOf(folderId) });
     }
 
     /**

@@ -707,21 +707,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             } else {
                 Log.d(TAG, "Wrong note id, should not happen");
             }
-            if (!isSyncMode()) {
-                if (!DataUtils.batchDeleteNotes(getContentResolver(), ids)) {
-                    Log.e(TAG, "Delete Note error");
-                }
-            } else {
-                if (!DataUtils.batchMoveToFolder(getContentResolver(), ids, Notes.ID_TRASH_FOLER)) {
-                    Log.e(TAG, "Move notes to trash folder error, should not happens");
-                }
+            long originFolderId = mWorkingNote.getFolderId();
+            if (originFolderId <= 0) {
+                originFolderId = Notes.ID_ROOT_FOLDER;
+            }
+            if (!DataUtils.batchMoveToTrash(getContentResolver(), ids, originFolderId)) {
+                Log.e(TAG, "Move notes to trash folder error");
             }
         }
         mWorkingNote.markDeleted(true);
-    }
-
-    private boolean isSyncMode() {
-        return NotesPreferenceActivity.getSyncAccountName(this).trim().length() > 0;
     }
 
     public void onClockAlertChanged(long date, boolean set) {

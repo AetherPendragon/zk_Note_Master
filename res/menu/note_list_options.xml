@@ -17,6 +17,12 @@
         android:icon="@drawable/menu_move"
         android:showAsAction="always|withText" />
 
+    <item
+        android:id="@+id/restore"
+        android:title="@string/menu_restore"
+        android:icon="@drawable/baseline_restore_from_trash_24"
+        android:showAsAction="always|withText" />
+
     <!--
         定义了一个菜单项，用于删除操作。和上面的移动操作类似，这个菜单项也始终显示在动作栏中，并带有文本标签。
     -->

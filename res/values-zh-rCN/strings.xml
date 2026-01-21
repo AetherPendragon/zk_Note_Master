@@ -44,6 +44,9 @@
     <string name="menu_search">搜索</string>
     <string name="menu_delete">删除</string>
     <string name="menu_move">移动到文件夹</string>
+    <string name="menu_restore">还原</string>
+    <string name="menu_delete_permanent">永久删除</string>
+    <string name="menu_trash">垃圾桶</string>
     <string name="menu_select_title">选中了 %d 项</string>
     <string name="menu_select_none">没有选中项，操作无效</string>
     <string name="menu_select_all">全选</string>
@@ -70,9 +73,14 @@
     <string name="memory_bottle_save_failed">保存失败，请重试</string>
     <string name="memory_bottle_folder_error">文件夹不可用，请重试</string>
     <string name="memory_bottle_loading">正在加载记忆...</string>
+    <string name="memory_bottle_delete">删除</string>
+    <string name="memory_bottle_delete_success">已删除</string>
+    <string name="memory_bottle_delete_failed">删除失败</string>
     <string name="memory_bottle_missing_content">内容为空</string>
     <string name="memory_bottle_entry_format">创建日期：%1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">记忆漂流瓶</string>
+    <string name="trash_folder_name">垃圾桶</string>
+    <string name="trash_restore_invalid">原位置不存在，已移至根目录</string>
     <string name="menu_list_mode">进入清单模式</string>
     <string name="menu_normal_mode">退出清单模式</string>
     <string name="menu_folder_view">查看文件夹</string>

@@ -50,6 +50,7 @@ import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -536,6 +537,12 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
                     .setTitle(R.string.memory_bottle_title)
                     .setMessage(message)
                     .setPositiveButton(R.string.memory_bottle_close, null)
+                    .setNegativeButton(R.string.memory_bottle_delete, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int which) {
+                            dialog.deleteMemoryEntry(result.entry);
+                        }
+                    })
                     .show();
         }
     }
@@ -544,5 +551,21 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
         NONE,
         ADD,
         BROWSE
+    }
+
+    private void deleteMemoryEntry(MemoryEntry entry) {
+        if (mMemoryFolderId <= 0) {
+            Toast.makeText(mActivity, R.string.memory_bottle_folder_error, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        HashSet<Long> ids = new HashSet<Long>();
+        ids.add(entry.id);
+        if (DataUtils.batchMoveToTrash(mActivity.getContentResolver(), ids, mMemoryFolderId)) {
+            sAllEntries.remove(entry);
+            sRemainingEntries.remove(entry);
+            Toast.makeText(mActivity, R.string.memory_bottle_delete_success, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(mActivity, R.string.memory_bottle_delete_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 }

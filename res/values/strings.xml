@@ -48,6 +48,9 @@
     <string name="menu_search">Search</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_move">Move to folder</string>
+    <string name="menu_restore">Restore</string>
+    <string name="menu_delete_permanent">Delete forever</string>
+    <string name="menu_trash">Trash</string>
     <string name="menu_select_title">%d selected</string>
     <string name="menu_select_none">Nothing selected, the operation is invalid</string>
     <string name="menu_select_all">Select all</string>
@@ -74,9 +77,14 @@
     <string name="memory_bottle_save_failed">Save failed, please try again.</string>
     <string name="memory_bottle_folder_error">Folder unavailable, please try again.</string>
     <string name="memory_bottle_loading">Loading memories...</string>
+    <string name="memory_bottle_delete">Delete</string>
+    <string name="memory_bottle_delete_success">Deleted.</string>
+    <string name="memory_bottle_delete_failed">Delete failed.</string>
     <string name="memory_bottle_missing_content">Content is empty.</string>
     <string name="memory_bottle_entry_format">Created: %1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">Memory Bottle</string>
+    <string name="trash_folder_name">Trash</string>
+    <string name="trash_restore_invalid">Restore target missing, moved to root.</string>
     <string name="menu_list_mode">Enter check list</string>
     <string name="menu_normal_mode">Leave check list</string>
     <string name="menu_folder_view">View folder</string>
