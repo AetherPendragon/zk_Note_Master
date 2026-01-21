@@ -994,6 +994,10 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             getMenuInflater().inflate(R.menu.call_record_folder, menu);
         } else if (mState == ListEditState.TRASH_FOLDER) {
             getMenuInflater().inflate(R.menu.sub_folder, menu);
+            MenuItem newNote = menu.findItem(R.id.menu_new_note);
+            if (newNote != null) {
+                newNote.setVisible(false);
+            }
         } else {
             Log.e(TAG, "Wrong state:" + mState);
         }

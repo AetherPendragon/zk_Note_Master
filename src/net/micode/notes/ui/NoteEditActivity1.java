@@ -61,6 +61,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.ContentValues;
 
 
 import net.micode.notes.R;
@@ -711,11 +712,25 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             if (originFolderId <= 0) {
                 originFolderId = Notes.ID_ROOT_FOLDER;
             }
-            if (!DataUtils.batchMoveToTrash(getContentResolver(), ids, originFolderId)) {
-                Log.e(TAG, "Move notes to trash folder error");
+            if (!moveNoteToTrash(id, originFolderId)) {
+                if (!DataUtils.batchMoveToTrash(getContentResolver(), ids, originFolderId)) {
+                    Log.e(TAG, "Move notes to trash folder error");
+                }
             }
         }
         mWorkingNote.markDeleted(true);
+    }
+
+    private boolean moveNoteToTrash(long noteId, long originFolderId) {
+        ContentValues values = new ContentValues();
+        values.put(Notes.NoteColumns.PARENT_ID, Notes.ID_TRASH_FOLER);
+        values.put(Notes.NoteColumns.ORIGIN_PARENT_ID, originFolderId);
+        values.put(Notes.NoteColumns.LOCAL_MODIFIED, 1);
+        values.put(Notes.NoteColumns.MODIFIED_DATE, System.currentTimeMillis());
+        int updated = getContentResolver().update(
+                ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, noteId),
+                values, null, null);
+        return updated > 0;
     }
 
     public void onClockAlertChanged(long date, boolean set) {
