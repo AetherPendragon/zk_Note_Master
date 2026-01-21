@@ -46,6 +46,7 @@ import android.text.format.DateUtils;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ImageSpan;
 import android.util.Log;
+import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -140,6 +141,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private static final String TAG = "NoteEditActivity";
+    private static final int ACTION_MODE_ITEM_UNDERLINE = 1001;
+    private static final int ACTION_MODE_ITEM_TEXT_COLOR = 1002;
     private static final int[] TEXT_COLOR_VALUES = new int[] {
             Color.BLACK,
             Color.RED,
@@ -1293,6 +1296,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mNoteEditor.getSettings().setAllowUniversalAccessFromFileURLs(true);
         }
         injectSelectionHelperIfNeeded();
+        setupSelectionActionMode();
     }
     // 添加富文本功能按钮初始化方法
     private void initRichEditorButtons() {
@@ -1320,44 +1324,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         });
 
-        // 下划线功能
-        final View underlineButton = findViewById(R.id.action_underline);
-        underlineButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    prepareSelectionRange();
-                }
-                return false;
-            }
-        });
-        underlineButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                applyUnderline();
-            }
-        });
-        
-        // 文字颜色功能
-        final View colorButton = findViewById(R.id.action_bg_color);
-        colorButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    prepareSelectionRange();
-                }
-                return false;
-            }
-        });
-        colorButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showTextColorDialog();
-            }
-        });
     }
 
-    private void showTextColorDialog() {
+    private void showTextColorDialog(final ActionMode mode) {
         String[] colorNames = getResources().getStringArray(R.array.text_color_names);
         if (colorNames.length == 0) {
             return;
@@ -1369,6 +1338,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                     public void onClick(DialogInterface dialog, int which) {
                         int index = Math.max(0, Math.min(which, TEXT_COLOR_VALUES.length - 1));
                         applyTextColor(TEXT_COLOR_VALUES[index]);
+                        if (mode != null) {
+                            mode.finish();
+                        }
                         dialog.dismiss();
                     }
                 })
@@ -1386,6 +1358,44 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         applySelectionCommand(
                 "if (window.RE && RE.setUnderline) { RE.setUnderline(); } "
                         + "else { document.execCommand('underline', false, null); }");
+    }
+
+    private void setupSelectionActionMode() {
+        mNoteEditor.setCustomSelectionActionModeCallback(new ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                MenuItem underlineItem = menu.add(0, ACTION_MODE_ITEM_UNDERLINE, 0,
+                        R.string.menu_underline);
+                underlineItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                MenuItem colorItem = menu.add(0, ACTION_MODE_ITEM_TEXT_COLOR, 1,
+                        R.string.menu_text_color);
+                colorItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                prepareSelectionRange();
+                if (item.getItemId() == ACTION_MODE_ITEM_UNDERLINE) {
+                    applyUnderline();
+                    mode.finish();
+                    return true;
+                } else if (item.getItemId() == ACTION_MODE_ITEM_TEXT_COLOR) {
+                    showTextColorDialog(mode);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+            }
+        });
     }
 
     private void prepareSelectionRange() {

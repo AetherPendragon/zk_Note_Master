@@ -58,6 +58,8 @@
     <string name="menu_font_large">大</string>
     <string name="menu_font_super">超大</string>
     <string name="text_color_title">選擇文字顏色</string>
+    <string name="menu_underline">下劃線</string>
+    <string name="menu_text_color">文字顏色</string>
     <string name="memory_bottle_entry">記憶漂流瓶</string>
     <string name="memory_bottle_title">記憶漂流瓶</string>
     <string name="memory_bottle_add">新增感想</string>

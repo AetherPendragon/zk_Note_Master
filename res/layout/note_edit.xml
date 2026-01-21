@@ -153,18 +153,6 @@
                         android:focusable="false"
                         android:clickable="true"/>
 
-                    <!-- 下划线按钮 -->
-                    <Button
-                        android:id="@+id/action_underline"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="4dp"
-                        android:background="@android:color/transparent"
-                        android:focusable="false"
-                        android:text="U"
-                        android:textStyle="bold"
-                        android:clickable="true"/>
-
                     <!-- 撤销按钮 -->
                     <Button
                         android:id="@+id/action_undo"
@@ -172,16 +160,6 @@
                         android:layout_height="40dp"
                         android:layout_marginStart="4dp"
                         android:background="@drawable/action_undo"
-                        android:backgroundTint="@null"
-                        android:focusable="false"/>
-
-                    <!-- 文字背景色按钮 -->
-                    <Button
-                        android:id="@+id/action_bg_color"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="4dp"
-                        android:background="@drawable/action_bg_color"
                         android:backgroundTint="@null"
                         android:focusable="false"/>
 
