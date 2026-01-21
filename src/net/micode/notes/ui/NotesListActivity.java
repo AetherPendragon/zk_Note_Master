@@ -135,8 +135,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private static final String ROOT_FOLDER_SELECTION = "(" + NoteColumns.TYPE + "<>"
             + Notes.TYPE_SYSTEM + " AND " + NoteColumns.PARENT_ID + "=?)" + " OR ("
             + NoteColumns.ID + "=" + Notes.ID_CALL_RECORD_FOLDER + " AND "
-            + NoteColumns.NOTES_COUNT + ">0)" + " OR ("
-            + NoteColumns.ID + "=" + Notes.ID_TRASH_FOLER + ")";
+            + NoteColumns.NOTES_COUNT + ">0)";
+
+    private static final String PREF_MEMORY_FOLDER_ID = "pref_memory_bottle_folder_id";
 
     private final static int REQUEST_CODE_OPEN_NODE = 102;
     private final static int REQUEST_CODE_NEW_NODE  = 103;
@@ -454,10 +455,24 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private void startAsyncNotesListQuery() {
         String selection = (mCurrentFolderId == Notes.ID_ROOT_FOLDER) ? ROOT_FOLDER_SELECTION
                 : NORMAL_SELECTION;
+        String[] selectionArgs;
+        if (mCurrentFolderId == Notes.ID_ROOT_FOLDER) {
+            long memoryFolderId = getMemoryBottleFolderId();
+            if (memoryFolderId > 0) {
+                selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
+                selectionArgs = new String[] {
+                        String.valueOf(mCurrentFolderId),
+                        String.valueOf(memoryFolderId)
+                };
+            } else {
+                selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
+            }
+        } else {
+            selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
+        }
         mBackgroundQueryHandler.startQuery(FOLDER_NOTE_LIST_QUERY_TOKEN, null,
-                Notes.CONTENT_NOTE_URI, NoteItemData.PROJECTION, selection, new String[] {
-                    String.valueOf(mCurrentFolderId)
-                }, NoteColumns.TYPE + " DESC," + NoteColumns.MODIFIED_DATE + " DESC");
+                Notes.CONTENT_NOTE_URI, NoteItemData.PROJECTION, selection, selectionArgs,
+                NoteColumns.TYPE + " DESC," + NoteColumns.MODIFIED_DATE + " DESC");
     }
 
     private final class BackgroundQueryHandler extends AsyncQueryHandler {
@@ -744,6 +759,16 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mContentResolver.delete(Notes.CONTENT_NOTE_URI,
                 NoteColumns.PARENT_ID + "=? AND " + NoteColumns.MODIFIED_DATE + "<?",
                 new String[] { String.valueOf(Notes.ID_TRASH_FOLER), String.valueOf(expireTime) });
+    }
+
+    private long getMemoryBottleFolderId() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        long folderId = sp.getLong(PREF_MEMORY_FOLDER_ID, -1);
+        if (folderId > 0 && DataUtils.visibleInNoteDatabase(mContentResolver, folderId,
+                Notes.TYPE_FOLDER)) {
+            return folderId;
+        }
+        return -1;
     }
 
     private void openMemoryBottle() {
