@@ -181,6 +181,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     private RichEditor mNoteEditor; // 替换原来的EditText
     private String mText; // 用于存储富文本内容
     private int mNoteLength; // 文本长度
+    private boolean mSelectionHelperInjected;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -1319,7 +1320,17 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         });
 
         // 下划线功能
-        findViewById(R.id.action_underline).setOnClickListener(new View.OnClickListener() {
+        final View underlineButton = findViewById(R.id.action_underline);
+        underlineButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    prepareSelectionRange();
+                }
+                return false;
+            }
+        });
+        underlineButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 applyUnderline();
@@ -1327,7 +1338,17 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         });
         
         // 文字颜色功能
-        findViewById(R.id.action_bg_color).setOnClickListener(new View.OnClickListener() {
+        final View colorButton = findViewById(R.id.action_bg_color);
+        colorButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    prepareSelectionRange();
+                }
+                return false;
+            }
+        });
+        colorButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showTextColorDialog();
@@ -1336,7 +1357,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void showTextColorDialog() {
-        prepareSelectionRange();
         String[] colorNames = getResources().getStringArray(R.array.text_color_names);
         if (colorNames.length == 0) {
             return;
@@ -1356,21 +1376,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private void applyTextColor(int color) {
         final String hex = String.format("#%06X", (0xFFFFFF & color));
-        applySelectionCommand("RE.setTextColor('" + hex + "')", new Runnable() {
-            @Override
-            public void run() {
-                mNoteEditor.setTextColor(color);
-            }
-        });
+        applySelectionCommand(
+                "if (window.RE && RE.setTextColor) { RE.setTextColor('" + hex + "'); } "
+                        + "else { document.execCommand('foreColor', false, '" + hex + "'); }");
     }
 
     private void applyUnderline() {
-        applySelectionCommand("RE.setUnderline()", new Runnable() {
-            @Override
-            public void run() {
-                mNoteEditor.setUnderline();
-            }
-        });
+        applySelectionCommand(
+                "if (window.RE && RE.setUnderline) { RE.setUnderline(); } "
+                        + "else { document.execCommand('underline', false, null); }");
     }
 
     private void prepareSelectionRange() {
@@ -1378,23 +1392,48 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             return;
         }
         mNoteEditor.focusEditor();
-        mNoteEditor.loadUrl("javascript:RE.prepareInsert();");
+        injectSelectionHelperIfNeeded();
+        mNoteEditor.loadUrl("javascript:if (window.notesSaveRange) { notesSaveRange(); }");
+        mNoteEditor.loadUrl("javascript:if (window.RE && RE.prepareInsert) { RE.prepareInsert(); }");
     }
 
-    private void applySelectionCommand(final String command, final Runnable fallback) {
+    private void applySelectionCommand(final String command) {
         if (mNoteEditor == null) {
             return;
         }
         mNoteEditor.focusEditor();
+        injectSelectionHelperIfNeeded();
         mNoteEditor.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mNoteEditor.loadUrl("javascript:RE.restoreRange();");
-                mNoteEditor.loadUrl("javascript:" + command);
-                if (fallback != null) {
-                    fallback.run();
-                }
+                mNoteEditor.loadUrl("javascript:if (window.RE && RE.restoreRange) { RE.restoreRange(); }");
+                mNoteEditor.loadUrl("javascript:if (window.notesRestoreRange) { notesRestoreRange(); }");
+                mNoteEditor.loadUrl("javascript:(function(){" + command + "})();");
             }
         }, 80);
+    }
+
+    private void injectSelectionHelperIfNeeded() {
+        if (mSelectionHelperInjected || mNoteEditor == null) {
+            return;
+        }
+        mNoteEditor.loadUrl("javascript:(function(){"
+                + "if (window.notesSaveRange) { return; }"
+                + "window.notesSelection = null;"
+                + "window.notesSaveRange = function(){"
+                + "  var sel = window.getSelection && window.getSelection();"
+                + "  if (sel && sel.rangeCount > 0) {"
+                + "    window.notesSelection = sel.getRangeAt(0);"
+                + "  }"
+                + "};"
+                + "window.notesRestoreRange = function(){"
+                + "  var sel = window.getSelection && window.getSelection();"
+                + "  if (sel && window.notesSelection) {"
+                + "    sel.removeAllRanges();"
+                + "    sel.addRange(window.notesSelection);"
+                + "  }"
+                + "};"
+                + "})();");
+        mSelectionHelperInjected = true;
     }
 }
