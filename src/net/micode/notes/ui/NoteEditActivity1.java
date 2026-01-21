@@ -140,15 +140,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private static final String TAG = "NoteEditActivity";
-    private static final int[] TEXT_COLOR_VALUES = new int[] {
-            Color.BLACK,
-            Color.RED,
-            Color.rgb(255, 140, 0),
-            Color.YELLOW,
-            Color.GREEN,
-            Color.BLUE,
-            Color.MAGENTA
-    };
 
     private HeadViewHolder mNoteHeaderHolder;
 
@@ -181,7 +172,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     private RichEditor mNoteEditor; // 替换原来的EditText
     private String mText; // 用于存储富文本内容
     private int mNoteLength; // 文本长度
-    private boolean mSelectionHelperInjected;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -452,17 +442,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         // 初始化富文本编辑器配置
         initRichEditor();
 
-        // 记录选区，避免点击工具栏后选区丢失
-        mNoteEditor.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_UP) {
-                    prepareSelectionRange();
-                }
-                return false;
-            }
-        });
-        
         // 设置富文本编辑器监听器
         mNoteEditor.setOnTextChangeListener(new RichEditor.OnTextChangeListener() {
             @Override
@@ -1292,7 +1271,6 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mNoteEditor.getSettings().setAllowFileAccessFromFileURLs(true);
             mNoteEditor.getSettings().setAllowUniversalAccessFromFileURLs(true);
         }
-        injectSelectionHelperIfNeeded();
     }
     // 添加富文本功能按钮初始化方法
     private void initRichEditorButtons() {
@@ -1323,114 +1301,4 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
 
-    private void prepareSelectionRange() {
-        if (mNoteEditor == null) {
-            return;
-        }
-        mNoteEditor.focusEditor();
-        injectSelectionHelperIfNeeded();
-        runEditorScript("if (window.notesSaveRange) { notesSaveRange(true); }");
-        runEditorScript("if (window.RE && RE.prepareInsert) { RE.prepareInsert(); }");
-    }
-
-    private void applySelectionCommand(final String command) {
-        if (mNoteEditor == null) {
-            return;
-        }
-        mNoteEditor.focusEditor();
-        injectSelectionHelperIfNeeded();
-        mNoteEditor.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                runEditorScript("if (window.RE && RE.restoreRange) { RE.restoreRange(); }");
-                runEditorScript("if (window.notesRestoreRange) { notesRestoreRange(); }");
-                runEditorScript("(function(){" + command + "})();");
-            }
-        }, 80);
-    }
-
-    private void injectSelectionHelperIfNeeded() {
-        if (mSelectionHelperInjected || mNoteEditor == null) {
-            return;
-        }
-        runEditorScript("(function(){"
-                + "if (window.notesToolbarInjected) { return; }"
-                + "window.notesToolbarInjected = true;"
-                + "window.notesSelection = null;"
-                + "window.notesSaveRange = function(force){"
-                + "  var sel = window.getSelection && window.getSelection();"
-                + "  if (!sel || sel.rangeCount === 0) { return; }"
-                + "  var range = sel.getRangeAt(0);"
-                + "  if (force || !range.collapsed) {"
-                + "    window.notesSelection = range;"
-                + "  }"
-                + "  if (window.notesUpdateToolbar) { window.notesUpdateToolbar(range); }"
-                + "};"
-                + "window.notesRestoreRange = function(){"
-                + "  var sel = window.getSelection && window.getSelection();"
-                + "  if (sel && window.notesSelection) {"
-                + "    sel.removeAllRanges();"
-                + "    sel.addRange(window.notesSelection);"
-                + "  }"
-                + "};"
-                + "var buildToolbar = function(){"
-                + "  if (!document.body) { setTimeout(buildToolbar, 50); return; }"
-                + "  var toolbar = document.createElement('div');"
-                + "  toolbar.id = 'notes-toolbar';"
-                + "  toolbar.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);"
-                + "background:#fff;border:1px solid #ddd;border-radius:8px;padding:6px 8px;display:none;"
-                + "z-index:9999;box-shadow:0 2px 6px rgba(0,0,0,0.2);';"
-                + "  var underlineBtn = document.createElement('button');"
-                + "  underlineBtn.textContent = 'U';"
-                + "  underlineBtn.style.cssText = 'font-weight:bold;margin-right:6px;border:0;background:#f5f5f5;"
-                + "padding:4px 8px;border-radius:4px;';"
-                + "  underlineBtn.onmousedown = function(e){"
-                + "    e.preventDefault(); e.stopPropagation();"
-                + "    if (window.notesRestoreRange) { notesRestoreRange(); }"
-                + "    document.execCommand('underline', false, null);"
-                + "    return false;"
-                + "  };"
-                + "  toolbar.appendChild(underlineBtn);"
-                + "  var colors = ['#000000','#ff0000','#ff8c00','#ffff00','#00aa00','#0000ff','#800080'];"
-                + "  var palette = document.createElement('span');"
-                + "  colors.forEach(function(c){"
-                + "    var dot = document.createElement('span');"
-                + "    dot.style.cssText = 'display:inline-block;width:16px;height:16px;border-radius:8px;"
-                + "margin:0 3px;background:' + c + ';border:1px solid #999;';"
-                + "    dot.onmousedown = function(e){"
-                + "      e.preventDefault(); e.stopPropagation();"
-                + "      if (window.notesRestoreRange) { notesRestoreRange(); }"
-                + "      document.execCommand('foreColor', false, c);"
-                + "      return false;"
-                + "    };"
-                + "    palette.appendChild(dot);"
-                + "  });"
-                + "  toolbar.appendChild(palette);"
-                + "  document.body.appendChild(toolbar);"
-                + "  window.notesUpdateToolbar = function(range){"
-                + "    if (!range || range.collapsed) { toolbar.style.display = 'none'; return; }"
-                + "    toolbar.style.display = 'block';"
-                + "  };"
-                + "  document.addEventListener('selectionchange', function(){"
-                + "    window.notesSaveRange(false);"
-                + "  });"
-                + "  document.addEventListener('touchstart', function(e){"
-                + "    if (!toolbar.contains(e.target)) { toolbar.style.display = 'none'; }"
-                + "  }, true);"
-                + "};"
-                + "buildToolbar();"
-                + "})();");
-        mSelectionHelperInjected = true;
-    }
-
-    private void runEditorScript(String script) {
-        if (mNoteEditor == null) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            mNoteEditor.evaluateJavascript("javascript:" + script, null);
-        } else {
-            mNoteEditor.loadUrl("javascript:" + script);
-        }
-    }
 }
