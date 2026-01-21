@@ -48,6 +48,7 @@
     <string name="menu_search">Search</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_move">Move to folder</string>
+    <string name="menu_create_encrypted_folder">Encrypted folder</string>
     <string name="menu_restore">Restore</string>
     <string name="menu_delete_permanent">Delete forever</string>
     <string name="menu_trash">Trash</string>
@@ -83,6 +84,13 @@
     <string name="memory_bottle_missing_content">Content is empty.</string>
     <string name="memory_bottle_entry_format">Created: %1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">Memory Bottle</string>
+    <string name="encrypted_folder_title">Create encrypted folder</string>
+    <string name="encrypted_question_hint">Security question</string>
+    <string name="encrypted_answer_hint">Answer</string>
+    <string name="encrypted_question_empty">Please enter a security question.</string>
+    <string name="encrypted_answer_empty">Please enter the answer.</string>
+    <string name="encrypted_unlock_title">Encrypted folder</string>
+    <string name="encrypted_answer_wrong">Wrong answer.</string>
     <string name="trash_folder_name">Trash</string>
     <string name="trash_restore_invalid">Restore target missing, moved to root.</string>
     <string name="menu_list_mode">Enter check list</string>

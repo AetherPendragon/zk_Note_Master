@@ -22,6 +22,10 @@
         android:id="@+id/menu_new_folder"
         android:title="@string/menu_create_folder"/>
 
+    <item
+        android:id="@+id/menu_new_encrypted_folder"
+        android:title="@string/menu_create_encrypted_folder"/>
+
     <!-- 导出文本菜单项 -->
     <item
         android:id="@+id/menu_export_text"
