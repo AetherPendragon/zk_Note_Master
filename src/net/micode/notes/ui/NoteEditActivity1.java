@@ -1292,6 +1292,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mNoteEditor.getSettings().setAllowFileAccessFromFileURLs(true);
             mNoteEditor.getSettings().setAllowUniversalAccessFromFileURLs(true);
         }
+        injectSelectionHelperIfNeeded();
     }
     // 添加富文本功能按钮初始化方法
     private void initRichEditorButtons() {
@@ -1393,8 +1394,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
         mNoteEditor.focusEditor();
         injectSelectionHelperIfNeeded();
-        mNoteEditor.loadUrl("javascript:if (window.notesSaveRange) { notesSaveRange(); }");
-        mNoteEditor.loadUrl("javascript:if (window.RE && RE.prepareInsert) { RE.prepareInsert(); }");
+        runEditorScript("if (window.notesSaveRange) { notesSaveRange(true); }");
+        runEditorScript("if (window.RE && RE.prepareInsert) { RE.prepareInsert(); }");
     }
 
     private void applySelectionCommand(final String command) {
@@ -1406,9 +1407,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mNoteEditor.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mNoteEditor.loadUrl("javascript:if (window.RE && RE.restoreRange) { RE.restoreRange(); }");
-                mNoteEditor.loadUrl("javascript:if (window.notesRestoreRange) { notesRestoreRange(); }");
-                mNoteEditor.loadUrl("javascript:(function(){" + command + "})();");
+                runEditorScript("if (window.RE && RE.restoreRange) { RE.restoreRange(); }");
+                runEditorScript("if (window.notesRestoreRange) { notesRestoreRange(); }");
+                runEditorScript("(function(){" + command + "})();");
             }
         }, 80);
     }
@@ -1417,13 +1418,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         if (mSelectionHelperInjected || mNoteEditor == null) {
             return;
         }
-        mNoteEditor.loadUrl("javascript:(function(){"
+        runEditorScript("(function(){"
                 + "if (window.notesSaveRange) { return; }"
                 + "window.notesSelection = null;"
-                + "window.notesSaveRange = function(){"
+                + "window.notesSaveRange = function(force){"
                 + "  var sel = window.getSelection && window.getSelection();"
-                + "  if (sel && sel.rangeCount > 0) {"
-                + "    window.notesSelection = sel.getRangeAt(0);"
+                + "  if (!sel || sel.rangeCount === 0) { return; }"
+                + "  var range = sel.getRangeAt(0);"
+                + "  if (force || !range.collapsed) {"
+                + "    window.notesSelection = range;"
                 + "  }"
                 + "};"
                 + "window.notesRestoreRange = function(){"
@@ -1433,7 +1436,21 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 + "    sel.addRange(window.notesSelection);"
                 + "  }"
                 + "};"
+                + "document.addEventListener('selectionchange', function(){"
+                + "  window.notesSaveRange(false);"
+                + "});"
                 + "})();");
         mSelectionHelperInjected = true;
+    }
+
+    private void runEditorScript(String script) {
+        if (mNoteEditor == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            mNoteEditor.evaluateJavascript("javascript:" + script, null);
+        } else {
+            mNoteEditor.loadUrl("javascript:" + script);
+        }
     }
 }
