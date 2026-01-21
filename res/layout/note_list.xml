@@ -76,15 +76,16 @@
                 android:focusable="false" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/btn_trash"
-            android:layout_width="48dip"
-            android:layout_height="48dip"
-            android:layout_gravity="bottom|left"
-            android:layout_marginLeft="8dip"
-            android:layout_marginBottom="8dip"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_menu_delete"
-            android:contentDescription="@string/menu_trash" />
     </FrameLayout>
+
+    <ImageButton
+        android:id="@+id/btn_trash"
+        android:layout_width="48dip"
+        android:layout_height="48dip"
+        android:layout_gravity="bottom|left"
+        android:layout_marginLeft="8dip"
+        android:layout_marginBottom="8dip"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="@string/menu_trash" />
 </FrameLayout>
