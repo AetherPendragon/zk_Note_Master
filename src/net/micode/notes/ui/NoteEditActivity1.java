@@ -450,6 +450,17 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         
         // 初始化富文本编辑器配置
         initRichEditor();
+
+        // 记录选区，避免点击工具栏后选区丢失
+        mNoteEditor.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    prepareSelectionRange();
+                }
+                return false;
+            }
+        });
         
         // 设置富文本编辑器监听器
         mNoteEditor.setOnTextChangeListener(new RichEditor.OnTextChangeListener() {
@@ -1311,8 +1322,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         findViewById(R.id.action_underline).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mNoteEditor.focusEditor();
-                mNoteEditor.setUnderline();
+                applyUnderline();
             }
         });
         
@@ -1326,8 +1336,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void showTextColorDialog() {
-        mNoteEditor.focusEditor();
-        mNoteEditor.loadUrl("javascript:RE.prepareInsert();");
+        prepareSelectionRange();
         String[] colorNames = getResources().getStringArray(R.array.text_color_names);
         if (colorNames.length == 0) {
             return;
@@ -1346,18 +1355,46 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void applyTextColor(int color) {
+        final String hex = String.format("#%06X", (0xFFFFFF & color));
+        applySelectionCommand("RE.setTextColor('" + hex + "')", new Runnable() {
+            @Override
+            public void run() {
+                mNoteEditor.setTextColor(color);
+            }
+        });
+    }
+
+    private void applyUnderline() {
+        applySelectionCommand("RE.setUnderline()", new Runnable() {
+            @Override
+            public void run() {
+                mNoteEditor.setUnderline();
+            }
+        });
+    }
+
+    private void prepareSelectionRange() {
         if (mNoteEditor == null) {
             return;
         }
         mNoteEditor.focusEditor();
-        final String hex = String.format("#%06X", (0xFFFFFF & color));
+        mNoteEditor.loadUrl("javascript:RE.prepareInsert();");
+    }
+
+    private void applySelectionCommand(final String command, final Runnable fallback) {
+        if (mNoteEditor == null) {
+            return;
+        }
+        mNoteEditor.focusEditor();
         mNoteEditor.postDelayed(new Runnable() {
             @Override
             public void run() {
                 mNoteEditor.loadUrl("javascript:RE.restoreRange();");
-                mNoteEditor.loadUrl("javascript:RE.setTextColor('" + hex + "')");
-                mNoteEditor.setTextColor(color);
+                mNoteEditor.loadUrl("javascript:" + command);
+                if (fallback != null) {
+                    fallback.run();
+                }
             }
-        }, 60);
+        }, 80);
     }
 }
