@@ -1306,6 +1306,15 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 mNoteEditor.setItalic();
             }
         });
+
+        // 下划线功能
+        findViewById(R.id.action_underline).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mNoteEditor.focusEditor();
+                mNoteEditor.setUnderline();
+            }
+        });
         
         // 文字颜色功能
         findViewById(R.id.action_bg_color).setOnClickListener(new View.OnClickListener() {
