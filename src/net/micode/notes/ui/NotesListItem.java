@@ -64,6 +64,13 @@ public class NotesListItem extends LinearLayout {
             mTitle.setText(context.getString(R.string.call_record_folder_name)
                     + context.getString(R.string.format_folder_files_count, data.getNotesCount()));
             mAlert.setImageResource(R.drawable.call_record);
+        } else if (data.getId() == Notes.ID_TRASH_FOLER) {
+            mCallName.setVisibility(View.GONE);
+            mAlert.setVisibility(View.VISIBLE);
+            mTitle.setTextAppearance(context, R.style.TextAppearancePrimaryItem);
+            mTitle.setText(context.getString(R.string.trash_folder_name)
+                    + context.getString(R.string.format_folder_files_count, data.getNotesCount()));
+            mAlert.setImageResource(android.R.drawable.ic_menu_delete);
         } else if (data.getParentId() == Notes.ID_CALL_RECORD_FOLDER) {
             mCallName.setVisibility(View.VISIBLE);
             mCallName.setText(data.getCallName());

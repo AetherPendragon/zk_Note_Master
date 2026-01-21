@@ -135,7 +135,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private static final String ROOT_FOLDER_SELECTION = "(" + NoteColumns.TYPE + "<>"
             + Notes.TYPE_SYSTEM + " AND " + NoteColumns.PARENT_ID + "=?)" + " OR ("
             + NoteColumns.ID + "=" + Notes.ID_CALL_RECORD_FOLDER + " AND "
-            + NoteColumns.NOTES_COUNT + ">0)";
+            + NoteColumns.NOTES_COUNT + ">0)" + " OR ("
+            + NoteColumns.ID + "=" + Notes.ID_TRASH_FOLER + ")";
 
     private final static int REQUEST_CODE_OPEN_NODE = 102;
     private final static int REQUEST_CODE_NEW_NODE  = 103;
@@ -678,6 +679,10 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     }
 
     private void openFolder(NoteItemData data) {
+        if (data.getId() == Notes.ID_TRASH_FOLER) {
+            openTrashFolder();
+            return;
+        }
         mCurrentFolderId = data.getId();
         startAsyncNotesListQuery();
         if (data.getId() == Notes.ID_CALL_RECORD_FOLDER) {
