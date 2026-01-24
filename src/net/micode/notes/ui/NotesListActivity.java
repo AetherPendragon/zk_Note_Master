@@ -32,7 +32,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -78,8 +77,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 
 public class NotesListActivity extends Activity implements OnClickListener, OnItemLongClickListener {
@@ -126,6 +123,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     private ModeCallback mModeCallBack;
     private MenuItem mRestoreMenu;
+    private TrashManager mTrashManager;
+    private EncryptedFolderManager mEncryptedFolderManager;
 
     private static final String TAG = "NotesListActivity";
 
@@ -243,6 +242,47 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mTitleBar = (TextView) findViewById(R.id.tv_title_bar);
         mState = ListEditState.NOTE_LIST;
         mModeCallBack = new ModeCallback();
+        mTrashManager = new TrashManager(this, mContentResolver, new TrashManager.Callback() {
+            @Override
+            public void onWidgetsNeedUpdate(HashSet<AppWidgetAttribute> widgets) {
+                if (widgets != null) {
+                    for (AppWidgetAttribute widget : widgets) {
+                        if (widget.widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
+                                && widget.widgetType != Notes.TYPE_WIDGET_INVALIDE) {
+                            updateWidget(widget.widgetId, widget.widgetType);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onListChanged() {
+                startAsyncNotesListQuery();
+            }
+
+            @Override
+            public void onActionModeFinished() {
+                mModeCallBack.finishActionMode();
+            }
+
+            @Override
+            public void onRestoreInvalid() {
+                Toast.makeText(NotesListActivity.this, R.string.trash_restore_invalid,
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+        mEncryptedFolderManager = new EncryptedFolderManager(this, mContentResolver,
+                new EncryptedFolderManager.Callback() {
+                    @Override
+                    public void onEncryptedFolderCreated() {
+                        startAsyncNotesListQuery();
+                    }
+
+                    @Override
+                    public void onEncryptedFolderUnlocked(NoteItemData data) {
+                        openFolderInternal(data);
+                    }
+                });
         updateMemoryButtonVisibility();
         updateTrashButtonVisibility();
     }
@@ -531,138 +571,16 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     }
 
     private void batchDelete() {
-        new AsyncTask<Void, Void, HashSet<AppWidgetAttribute>>() {
-            protected HashSet<AppWidgetAttribute> doInBackground(Void... unused) {
-                HashSet<AppWidgetAttribute> widgets = mNotesListAdapter.getSelectedWidget();
-                HashSet<Long> ids = mNotesListAdapter.getSelectedItemIds();
-                if (mState == ListEditState.TRASH_FOLDER) {
-                    if (!DataUtils.batchDeleteNotes(mContentResolver, ids)) {
-                        Log.e(TAG, "Delete notes error, should not happens");
-                    }
-                } else {
-                    if (!DataUtils.batchMoveToTrash(mContentResolver, ids, mCurrentFolderId)) {
-                        Log.e(TAG, "Move notes to trash folder error");
-                    }
-                }
-                return widgets;
-            }
-
-            @Override
-            protected void onPostExecute(HashSet<AppWidgetAttribute> widgets) {
-                if (widgets != null) {
-                    for (AppWidgetAttribute widget : widgets) {
-                        if (widget.widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
-                                && widget.widgetType != Notes.TYPE_WIDGET_INVALIDE) {
-                            updateWidget(widget.widgetId, widget.widgetType);
-                        }
-                    }
-                }
-                startAsyncNotesListQuery();
-                mModeCallBack.finishActionMode();
-            }
-        }.execute();
+        HashSet<AppWidgetAttribute> widgets = mNotesListAdapter.getSelectedWidget();
+        HashSet<Long> ids = mNotesListAdapter.getSelectedItemIds();
+        boolean inTrash = mState == ListEditState.TRASH_FOLDER;
+        mTrashManager.batchDelete(inTrash, ids, widgets, mCurrentFolderId);
     }
 
     private void restoreSelected() {
-        new AsyncTask<Void, Void, Boolean>() {
-            private HashSet<AppWidgetAttribute> mWidgets;
-
-            protected Boolean doInBackground(Void... params) {
-                HashSet<Long> ids = mNotesListAdapter.getSelectedItemIds();
-                mWidgets = mNotesListAdapter.getSelectedWidget();
-                boolean hasInvalid = false;
-                long now = System.currentTimeMillis();
-                for (long id : ids) {
-                    Cursor cursor = mContentResolver.query(
-                            ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id),
-                            new String[] { NoteColumns.ORIGIN_PARENT_ID, NoteColumns.TYPE },
-                            null, null, null);
-                    if (cursor == null) {
-                        continue;
-                    }
-                    long originParent = Notes.ID_ROOT_FOLDER;
-                    int type = Notes.TYPE_NOTE;
-                    try {
-                        if (cursor.moveToFirst()) {
-                            originParent = cursor.getLong(0);
-                            type = cursor.getInt(1);
-                        }
-                    } finally {
-                        cursor.close();
-                    }
-                    long targetParent = resolveRestoreParent(originParent);
-                    if (targetParent != originParent) {
-                        hasInvalid = true;
-                    }
-                    ContentValues values = new ContentValues();
-                    values.put(NoteColumns.PARENT_ID, targetParent);
-                    values.put(NoteColumns.ORIGIN_PARENT_ID, 0);
-                    values.put(NoteColumns.LOCAL_MODIFIED, 1);
-                    values.put(NoteColumns.MODIFIED_DATE, now);
-                    mContentResolver.update(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, id),
-                            values, null, null);
-                    if (type == Notes.TYPE_FOLDER) {
-                        restoreNotesForFolder(id, now);
-                    }
-                }
-                return hasInvalid;
-            }
-
-            @Override
-            protected void onPostExecute(Boolean hasInvalid) {
-                if (hasInvalid != null && hasInvalid) {
-                    Toast.makeText(NotesListActivity.this, R.string.trash_restore_invalid,
-                            Toast.LENGTH_SHORT).show();
-                }
-                if (mWidgets != null) {
-                    for (AppWidgetAttribute widget : mWidgets) {
-                        if (widget.widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
-                                && widget.widgetType != Notes.TYPE_WIDGET_INVALIDE) {
-                            updateWidget(widget.widgetId, widget.widgetType);
-                        }
-                    }
-                }
-                startAsyncNotesListQuery();
-                mModeCallBack.finishActionMode();
-            }
-        }.execute();
-    }
-
-    private void restoreNotesForFolder(long folderId, long now) {
-        ContentValues values = new ContentValues();
-        values.put(NoteColumns.PARENT_ID, folderId);
-        values.put(NoteColumns.ORIGIN_PARENT_ID, 0);
-        values.put(NoteColumns.LOCAL_MODIFIED, 1);
-        values.put(NoteColumns.MODIFIED_DATE, now);
-        mContentResolver.update(Notes.CONTENT_NOTE_URI, values,
-                NoteColumns.PARENT_ID + "=? AND " + NoteColumns.ORIGIN_PARENT_ID + "=?",
-                new String[] { String.valueOf(Notes.ID_TRASH_FOLER), String.valueOf(folderId) });
-    }
-
-    private long resolveRestoreParent(long originParentId) {
-        if (originParentId == Notes.ID_ROOT_FOLDER || originParentId == Notes.ID_CALL_RECORD_FOLDER) {
-            return originParentId;
-        }
-        if (originParentId <= 0) {
-            return Notes.ID_ROOT_FOLDER;
-        }
-        Cursor cursor = mContentResolver.query(
-                ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, originParentId),
-                new String[] { NoteColumns.ID, NoteColumns.PARENT_ID },
-                NoteColumns.PARENT_ID + "<>?",
-                new String[] { String.valueOf(Notes.ID_TRASH_FOLER) },
-                null);
-        if (cursor == null) {
-            return Notes.ID_ROOT_FOLDER;
-        }
-        try {
-            if (cursor.moveToFirst()) {
-                return originParentId;
-            }
-        } finally {
-            cursor.close();
-        }
-        return Notes.ID_ROOT_FOLDER;
+        HashSet<Long> ids = mNotesListAdapter.getSelectedItemIds();
+        HashSet<AppWidgetAttribute> widgets = mNotesListAdapter.getSelectedWidget();
+        mTrashManager.restoreSelected(ids, widgets);
     }
 
     private void deleteFolder(long folderId) {
@@ -671,14 +589,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             return;
         }
 
-        HashSet<Long> ids = new HashSet<Long>();
-        ids.add(folderId);
-        HashSet<AppWidgetAttribute> widgets = DataUtils.getFolderNoteWidget(mContentResolver,
-                folderId);
-        DataUtils.moveNotesToTrashForFolder(mContentResolver, folderId);
-        if (!DataUtils.batchMoveToTrash(mContentResolver, ids, mCurrentFolderId)) {
-            Log.e(TAG, "Move folder to trash error");
-        }
+        HashSet<AppWidgetAttribute> widgets = mTrashManager.moveFolderToTrash(folderId, mCurrentFolderId);
         if (widgets != null) {
             for (AppWidgetAttribute widget : widgets) {
                 if (widget.widgetId != AppWidgetManager.INVALID_APPWIDGET_ID
@@ -701,9 +612,10 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             openTrashFolder();
             return;
         }
-        EncryptedFolderInfo encryptedInfo = getEncryptedFolderInfo(data.getId());
+        EncryptedFolderManager.EncryptedFolderInfo encryptedInfo =
+                mEncryptedFolderManager.getEncryptedFolderInfo(data.getId());
         if (encryptedInfo != null) {
-            showEncryptedUnlockDialog(encryptedInfo, data);
+            mEncryptedFolderManager.showEncryptedUnlockDialog(encryptedInfo, data);
             return;
         }
         openFolderInternal(data);
@@ -747,13 +659,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         }
     }
 
-    private void cleanupExpiredTrash() {
-        long expireTime = System.currentTimeMillis() - 24L * 60L * 60L * 1000L;
-        mContentResolver.delete(Notes.CONTENT_NOTE_URI,
-                NoteColumns.PARENT_ID + "=? AND " + NoteColumns.MODIFIED_DATE + "<?",
-                new String[] { String.valueOf(Notes.ID_TRASH_FOLER), String.valueOf(expireTime) });
-    }
-
     private long getMemoryBottleFolderId() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         long folderId = sp.getLong(PREF_MEMORY_FOLDER_ID, -1);
@@ -763,131 +668,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         }
         return -1;
     }
-
-    private void showCreateEncryptedFolderDialog() {
-        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_encrypted_folder, null);
-        final EditText etName = (EditText) view.findViewById(R.id.et_encrypted_folder_name);
-        final EditText etQuestion = (EditText) view.findViewById(R.id.et_encrypted_question);
-        final EditText etAnswer = (EditText) view.findViewById(R.id.et_encrypted_answer);
-        etAnswer.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        builder.setTitle(R.string.encrypted_folder_title);
-        builder.setView(view);
-        builder.setPositiveButton(android.R.string.ok, null);
-        builder.setNegativeButton(android.R.string.cancel, null);
-        final Dialog dialog = builder.show();
-        final Button positive = (Button) dialog.findViewById(android.R.id.button1);
-        positive.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String name = etName.getText().toString().trim();
-                String question = etQuestion.getText().toString().trim();
-                String answer = etAnswer.getText().toString().trim();
-                if (TextUtils.isEmpty(name)) {
-                    etName.setError(getString(R.string.hint_foler_name));
-                    return;
-                }
-                if (TextUtils.isEmpty(question)) {
-                    etQuestion.setError(getString(R.string.encrypted_question_empty));
-                    return;
-                }
-                if (TextUtils.isEmpty(answer)) {
-                    etAnswer.setError(getString(R.string.encrypted_answer_empty));
-                    return;
-                }
-                if (DataUtils.checkVisibleFolderName(mContentResolver, name)) {
-                    Toast.makeText(NotesListActivity.this,
-                            getString(R.string.folder_exist, name), Toast.LENGTH_LONG).show();
-                    return;
-                }
-                long folderId = createEncryptedFolder(name, question, answer);
-                if (folderId > 0) {
-                    dialog.dismiss();
-                    startAsyncNotesListQuery();
-                }
-            }
-        });
-    }
-
-    private long createEncryptedFolder(String name, String question, String answer) {
-        ContentValues values = new ContentValues();
-        values.put(NoteColumns.SNIPPET, name);
-        values.put(NoteColumns.TYPE, Notes.TYPE_FOLDER);
-        values.put(NoteColumns.LOCAL_MODIFIED, 1);
-        Uri uri = mContentResolver.insert(Notes.CONTENT_NOTE_URI, values);
-        if (uri == null) {
-            return -1;
-        }
-        long folderId = -1;
-        try {
-            folderId = Long.parseLong(uri.getPathSegments().get(1));
-        } catch (NumberFormatException e) {
-            Log.e(TAG, "Create encrypted folder failed", e);
-            return -1;
-        }
-        ContentValues dataValues = new ContentValues();
-        dataValues.put(DataColumns.NOTE_ID, folderId);
-        dataValues.put(DataColumns.MIME_TYPE, Notes.DataConstants.ENCRYPTED_FOLDER);
-        dataValues.put(DataColumns.DATA3, question);
-        dataValues.put(DataColumns.DATA4, hashAnswer(answer));
-        mContentResolver.insert(Notes.CONTENT_DATA_URI, dataValues);
-        return folderId;
-    }
-
-    private EncryptedFolderInfo getEncryptedFolderInfo(long folderId) {
-        Cursor cursor = mContentResolver.query(Notes.CONTENT_DATA_URI,
-                new String[] { DataColumns.DATA3, DataColumns.DATA4 },
-                DataColumns.NOTE_ID + "=? AND " + DataColumns.MIME_TYPE + "=?",
-                new String[] { String.valueOf(folderId), Notes.DataConstants.ENCRYPTED_FOLDER },
-                null);
-        if (cursor == null) {
-            return null;
-        }
-        try {
-            if (cursor.moveToFirst()) {
-                String question = cursor.getString(0);
-                String answerHash = cursor.getString(1);
-                if (!TextUtils.isEmpty(question) && !TextUtils.isEmpty(answerHash)) {
-                    return new EncryptedFolderInfo(folderId, question, answerHash);
-                }
-            }
-        } finally {
-            cursor.close();
-        }
-        return null;
-    }
-
-    private void showEncryptedUnlockDialog(final EncryptedFolderInfo info, final NoteItemData data) {
-        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_encrypted_unlock, null);
-        TextView tvQuestion = (TextView) view.findViewById(R.id.tv_encrypted_question);
-        final EditText etAnswer = (EditText) view.findViewById(R.id.et_encrypted_answer);
-        tvQuestion.setText(info.question);
-        builder.setTitle(R.string.encrypted_unlock_title);
-        builder.setView(view);
-        builder.setPositiveButton(android.R.string.ok, null);
-        builder.setNegativeButton(android.R.string.cancel, null);
-        final Dialog dialog = builder.show();
-        final Button positive = (Button) dialog.findViewById(android.R.id.button1);
-        positive.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String answer = etAnswer.getText().toString().trim();
-                if (TextUtils.isEmpty(answer)) {
-                    etAnswer.setError(getString(R.string.encrypted_answer_empty));
-                    return;
-                }
-                if (!TextUtils.equals(hashAnswer(answer), info.answerHash)) {
-                    Toast.makeText(NotesListActivity.this,
-                            R.string.encrypted_answer_wrong, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                dialog.dismiss();
-                openFolderInternal(data);
-            }
-        });
-    }
-
     private void openFolderInternal(NoteItemData data) {
         mCurrentFolderId = data.getId();
         startAsyncNotesListQuery();
@@ -907,33 +687,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         updateTrashButtonVisibility();
     }
 
-    private String hashAnswer(String answer) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] result = digest.digest(answer.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : result) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            Log.e(TAG, "Hash error", e);
-            return "";
-        }
-    }
-
-    private static class EncryptedFolderInfo {
-        private final long folderId;
-        private final String question;
-        private final String answerHash;
-
-        private EncryptedFolderInfo(long folderId, String question, String answerHash) {
-            this.folderId = folderId;
-            this.question = question;
-            this.answerHash = answerHash;
-        }
-    }
-
     private void openMemoryBottle() {
         if (mMemoryBottleDialog == null) {
             mMemoryBottleDialog = new MemoryBottleDialog(this);
@@ -944,7 +697,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private void openTrashFolder() {
         mCurrentFolderId = Notes.ID_TRASH_FOLER;
         mState = ListEditState.TRASH_FOLDER;
-        cleanupExpiredTrash();
+        mTrashManager.cleanupExpiredTrash();
         startAsyncNotesListQuery();
         mTitleBar.setText(R.string.trash_folder_name);
         mTitleBar.setVisibility(View.VISIBLE);
@@ -1200,7 +953,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 break;
             }
             case R.id.menu_new_encrypted_folder: {
-                showCreateEncryptedFolderDialog();
+                mEncryptedFolderManager.showCreateEncryptedFolderDialog();
                 break;
             }
             case R.id.menu_export_text: {
