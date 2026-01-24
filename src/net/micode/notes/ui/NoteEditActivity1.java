@@ -22,7 +22,6 @@ import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.SearchManager;
 import android.appwidget.AppWidgetManager;
-import android.content.ActivityNotFoundException;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -36,9 +35,7 @@ import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.provider.MediaStore;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
@@ -78,9 +75,6 @@ import net.micode.notes.widget.NoteWidgetProvider_2x;
 import net.micode.notes.widget.NoteWidgetProvider_4x;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -172,6 +166,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     private RichEditor mNoteEditor; // 替换原来的EditText
     private String mText; // 用于存储富文本内容
     private int mNoteLength; // 文本长度
+    private ImageInsertHelper mImageInsertHelper;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -438,6 +433,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             Log.e(TAG, "RichEditor is null! Check layout file.");
             return;
         }
+
+        mImageInsertHelper = new ImageInsertHelper(this, PHOTO_REQUEST);
         
         // 初始化富文本编辑器配置
         initRichEditor();
@@ -1004,6 +1001,30 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return saved;
     }
 
+    private void showImagePreview(String localImagePath) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("图片选择成功！");
+
+        ImageView imageView = new ImageView(this);
+        imageView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        imageView.setImageURI(Uri.fromFile(new File(localImagePath)));
+        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        builder.setView(imageView);
+
+        builder.setPositiveButton("确认保存", (dialog, which) -> {
+            boolean isSaved = saveNote();
+            if (isSaved) {
+                Toast.makeText(this, "图片信息已保存！", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        builder.show();
+    }
+
     private void sendToDesktop() {
         /**
          * Before send message to home, we should make sure that current
@@ -1056,143 +1077,25 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     // ========== 新增：打开系统相册选择图片 ==========
     private void addPicture() {
-        try {
-            Intent intent;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-            } else {
-                intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            }
-            intent.setType("image/*"); // 只显示图片类型
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-            }
-            startActivityForResult(intent, PHOTO_REQUEST); // 启动相册，等待返回结果
-        } catch (ActivityNotFoundException e) {
-            // 如果没有相册应用，尝试使用通用选择器
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            try {
-                startActivityForResult(intent, PHOTO_REQUEST);
-            } catch (ActivityNotFoundException ex) {
-                showToast(R.string.error_picture_select);
-                Log.e(TAG, "No image picker available", ex);
-            }
+        if (mImageInsertHelper != null) {
+            mImageInsertHelper.startPickImage();
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PHOTO_REQUEST && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            if (uri == null) {
-                showToast(R.string.error_picture_select);
-                return;
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                final int takeFlags = data.getFlags()
-                        & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                try {
-                    getContentResolver().takePersistableUriPermission(uri, takeFlags);
-                } catch (SecurityException e) {
-                    Log.w(TAG, "Persistable uri permission not granted", e);
-                }
-            }
-            String localImagePath = saveImageToLocal(uri);
-            if (TextUtils.isEmpty(localImagePath)) {
-                return; // 保存失败就退出
-            }
-
-            insertImageToEditor(localImagePath);
-
-            // 弹窗保留，用于预览与确认保存
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("图片选择成功！");
-
-            ImageView imageView = new ImageView(this);
-            imageView.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT)); // 加布局参数，避免图片显示不全
-            imageView.setImageURI(Uri.fromFile(new File(localImagePath)));
-            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER); // 适配图片大小
-            builder.setView(imageView);
-
-            builder.setPositiveButton("确认保存", (dialog, which) -> {
-                boolean isSaved = saveNote();
-                if (isSaved) {
-                    Toast.makeText(this, "图片信息已保存！", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "保存失败，请重试", Toast.LENGTH_SHORT).show();
-                }
-            });
-            builder.setNegativeButton(android.R.string.cancel, null);
-
-            builder.show();
-        }
-    }
-
-    // 新增工具方法：把临时URI的图片复制到应用私有目录，返回真实路径
-    private String saveImageToLocal(Uri uri) {
-        try {
-            File baseDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-            if (baseDir == null) {
-                baseDir = getFilesDir();
-            }
-            File appDir = new File(baseDir, "note_images");
-            if (!appDir.exists() && !appDir.mkdirs()) {
-                Log.e("NoteEdit", "创建图片目录失败: " + appDir.getAbsolutePath());
-                Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
-                return null;
-            }
-
-            // 2. 生成唯一文件名（避免重复）
-            String fileName = "note_" + System.currentTimeMillis() + ".jpg";
-            File targetFile = new File(appDir, fileName);
-
-            // 3. 复制图片文件（从临时URI到本地目录）
-            try (InputStream is = getContentResolver().openInputStream(uri);
-                 OutputStream os = new FileOutputStream(targetFile)) {
-                if (is == null) {
-                    Log.e("NoteEdit", "无法读取图片流: " + uri);
-                    Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
-                    return null;
-                }
-                byte[] buffer = new byte[1024];
-                int len;
-                while ((len = is.read(buffer)) > 0) {
-                    os.write(buffer, 0, len);
-                }
-            }
-
-            // 返回图片的真实本地路径（不是URI）
-            return targetFile.getAbsolutePath();
-        } catch (Exception e) {
-            Log.e("NoteEdit", "保存图片失败", e);
-            Toast.makeText(this, "图片保存失败", Toast.LENGTH_SHORT).show();
-            return null;
-        }
-    }
-
-    private void insertImageToEditor(String localImagePath) {
-        if (mNoteEditor == null) {
+        if (mImageInsertHelper == null) {
             return;
         }
-        String imgHtmlTag = buildImageHtmlTag(localImagePath);
-        String curHtml = normalizeEditorHtml(mNoteEditor.getHtml());
-        String newHtml = curHtml + imgHtmlTag;
-        mNoteEditor.setHtml(newHtml);
-        mNoteEditor.focusEditor();
-        mText = newHtml;
-        mWorkingNote.setWorkingText(newHtml);
-    }
-
-    private String buildImageHtmlTag(String localImagePath) {
-        String imgUrl = Uri.fromFile(new File(localImagePath)).toString();
-        return "<img src=\"" + imgUrl + "\" width=\"200\" height=\"200\"/><br/>";
+        ImageInsertHelper.Result result = mImageInsertHelper.handleActivityResult(
+                requestCode, resultCode, data, mNoteEditor);
+        if (result == null || !result.success) {
+            return;
+        }
+        mWorkingNote.setWorkingText(result.html);
+        mText = result.html;
+        showImagePreview(result.localPath);
     }
 
     private String normalizeEditorHtml(String html) {
