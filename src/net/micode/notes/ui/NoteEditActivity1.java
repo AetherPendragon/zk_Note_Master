@@ -656,66 +656,92 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void setReminder() {
-        DateTimePickerDialog d = new DateTimePickerDialog(this, System.currentTimeMillis());
-        d.setOnDateTimeSetListener(new OnDateTimeSetListener() {
-            public void OnDateTimeSet(AlertDialog dialog, long date) {
-                mWorkingNote.setAlertDate(date	, true);
-            }
-        });
-        d.show();
-        showQuickReminderDialog();
+        showReminderChoiceDialog();
     }
 
-    private void showQuickReminderDialog() {
+    private void showReminderChoiceDialog() {
         final String[] options = new String[] {
-                getString(R.string.reminder_in_hours),
-                getString(R.string.reminder_in_minutes),
-                getString(R.string.reminder_in_seconds)
+                getString(R.string.reminder_mode_absolute),
+                getString(R.string.reminder_mode_relative)
         };
         new AlertDialog.Builder(this)
-                .setTitle(R.string.reminder_quick_title)
+                .setTitle(R.string.reminder_mode_title)
                 .setItems(options, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        showQuickReminderInput(which);
+                        if (which == 0) {
+                            showAbsoluteReminderDialog();
+                        } else {
+                            showRelativeReminderDialog();
+                        }
                     }
                 })
                 .show();
     }
 
-    private void showQuickReminderInput(final int type) {
-        final EditText editText = new EditText(this);
-        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+    private void showAbsoluteReminderDialog() {
+        DateTimePickerDialog d = new DateTimePickerDialog(this, System.currentTimeMillis());
+        d.setOnDateTimeSetListener(new OnDateTimeSetListener() {
+            public void OnDateTimeSet(AlertDialog dialog, long date) {
+                mWorkingNote.setAlertDate(date, true);
+            }
+        });
+        d.show();
+    }
+
+    private void showRelativeReminderDialog() {
+        final EditText hoursInput = new EditText(this);
+        final EditText minutesInput = new EditText(this);
+        final EditText secondsInput = new EditText(this);
+        hoursInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        minutesInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        secondsInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        hoursInput.setHint(R.string.reminder_hours_hint);
+        minutesInput.setHint(R.string.reminder_minutes_hint);
+        secondsInput.setHint(R.string.reminder_seconds_hint);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (getResources().getDisplayMetrics().density * 16);
+        container.setPadding(padding, padding, padding, padding);
+        container.addView(hoursInput);
+        container.addView(minutesInput);
+        container.addView(secondsInput);
+
         new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.reminder_quick_input_title))
-                .setView(editText)
+                .setTitle(getString(R.string.reminder_duration_title))
+                .setView(container)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String value = editText.getText().toString().trim();
-                        if (TextUtils.isEmpty(value)) {
-                            showToast(R.string.reminder_quick_empty);
+                        String hoursText = hoursInput.getText().toString().trim();
+                        String minutesText = minutesInput.getText().toString().trim();
+                        String secondsText = secondsInput.getText().toString().trim();
+                        if (TextUtils.isEmpty(hoursText)
+                                && TextUtils.isEmpty(minutesText)
+                                && TextUtils.isEmpty(secondsText)) {
+                            showToast(R.string.reminder_duration_empty);
                             return;
                         }
-                        int amount;
+                        int hours;
+                        int minutes;
+                        int seconds;
                         try {
-                            amount = Integer.parseInt(value);
+                            hours = TextUtils.isEmpty(hoursText) ? 0 : Integer.parseInt(hoursText);
+                            minutes = TextUtils.isEmpty(minutesText) ? 0 : Integer.parseInt(minutesText);
+                            seconds = TextUtils.isEmpty(secondsText) ? 0 : Integer.parseInt(secondsText);
                         } catch (NumberFormatException e) {
-                            showToast(R.string.reminder_quick_invalid);
+                            showToast(R.string.reminder_duration_invalid);
                             return;
                         }
-                        if (amount <= 0) {
-                            showToast(R.string.reminder_quick_invalid);
+                        if (hours < 0 || minutes < 0 || seconds < 0
+                                || (hours == 0 && minutes == 0 && seconds == 0)) {
+                            showToast(R.string.reminder_duration_invalid);
                             return;
                         }
-                        long delta;
-                        if (type == 0) {
-                            delta = amount * 60L * 60L * 1000L;
-                        } else if (type == 1) {
-                            delta = amount * 60L * 1000L;
-                        } else {
-                            delta = amount * 1000L;
-                        }
+                        long delta = hours * 60L * 60L * 1000L
+                                + minutes * 60L * 1000L
+                                + seconds * 1000L;
                         long target = System.currentTimeMillis() + delta;
                         mWorkingNote.setAlertDate(target, true);
                     }
