@@ -62,6 +62,11 @@
     <string name="menu_font_large">Large</string>
     <string name="menu_font_super">Super</string>
     <string name="text_color_title">Text color</string>
+    <string name="menu_doodle">Draw</string>
+    <string name="doodle_title">Doodle</string>
+    <string name="doodle_clear">Clear</string>
+    <string name="doodle_save">Save</string>
+    <string name="doodle_save_failed">Save failed.</string>
     <string name="memory_bottle_entry">Memory Bottle</string>
     <string name="memory_bottle_title">Memory Bottle</string>
     <string name="memory_bottle_add">Add memory</string>

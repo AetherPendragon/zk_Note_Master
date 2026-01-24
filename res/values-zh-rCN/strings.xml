@@ -58,6 +58,11 @@
     <string name="menu_font_large">大</string>
     <string name="menu_font_super">超大</string>
     <string name="text_color_title">选择文字颜色</string>
+    <string name="menu_doodle">涂鸦</string>
+    <string name="doodle_title">涂鸦</string>
+    <string name="doodle_clear">清空</string>
+    <string name="doodle_save">保存</string>
+    <string name="doodle_save_failed">保存失败</string>
     <string name="memory_bottle_entry">记忆漂流瓶</string>
     <string name="memory_bottle_title">记忆漂流瓶</string>
     <string name="memory_bottle_add">添加感想</string>

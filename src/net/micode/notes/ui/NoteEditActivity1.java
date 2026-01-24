@@ -1201,6 +1201,39 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         });
 
+        // 涂鸦功能
+        findViewById(R.id.action_doodle).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showDoodleDialog();
+            }
+        });
+
+    }
+
+    private void showDoodleDialog() {
+        DoodleDialog dialog = new DoodleDialog(this, new DoodleDialog.OnDoodleSavedListener() {
+            @Override
+            public void onSaved(String localPath) {
+                insertImageFromLocal(localPath);
+                showImagePreview(localPath);
+            }
+        });
+        dialog.show();
+    }
+
+    private void insertImageFromLocal(String localImagePath) {
+        if (mNoteEditor == null) {
+            return;
+        }
+        String imgUrl = Uri.fromFile(new File(localImagePath)).toString();
+        String imgHtmlTag = "<img src=\"" + imgUrl + "\" width=\"200\" height=\"200\"/><br/>";
+        String curHtml = normalizeEditorHtml(mNoteEditor.getHtml());
+        String newHtml = curHtml + imgHtmlTag;
+        mNoteEditor.setHtml(newHtml);
+        mNoteEditor.focusEditor();
+        mText = newHtml;
+        mWorkingNote.setWorkingText(newHtml);
     }
 
 

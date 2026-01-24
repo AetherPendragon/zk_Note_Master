@@ -153,6 +153,18 @@
                         android:focusable="false"
                         android:clickable="true"/>
 
+                    <!-- 涂鸦按钮 -->
+                    <Button
+                        android:id="@+id/action_doodle"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="4dp"
+                        android:background="@android:color/transparent"
+                        android:focusable="false"
+                        android:text="@string/menu_doodle"
+                        android:textStyle="bold"
+                        android:clickable="true"/>
+
                     <!-- 撤销按钮 -->
                     <Button
                         android:id="@+id/action_undo"
