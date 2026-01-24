@@ -58,6 +58,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.text.InputType;
 import android.content.ContentValues;
 
 
@@ -662,6 +663,65 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         });
         d.show();
+        showQuickReminderDialog();
+    }
+
+    private void showQuickReminderDialog() {
+        final String[] options = new String[] {
+                getString(R.string.reminder_in_hours),
+                getString(R.string.reminder_in_minutes),
+                getString(R.string.reminder_in_seconds)
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.reminder_quick_title)
+                .setItems(options, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        showQuickReminderInput(which);
+                    }
+                })
+                .show();
+    }
+
+    private void showQuickReminderInput(final int type) {
+        final EditText editText = new EditText(this);
+        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.reminder_quick_input_title))
+                .setView(editText)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String value = editText.getText().toString().trim();
+                        if (TextUtils.isEmpty(value)) {
+                            showToast(R.string.reminder_quick_empty);
+                            return;
+                        }
+                        int amount;
+                        try {
+                            amount = Integer.parseInt(value);
+                        } catch (NumberFormatException e) {
+                            showToast(R.string.reminder_quick_invalid);
+                            return;
+                        }
+                        if (amount <= 0) {
+                            showToast(R.string.reminder_quick_invalid);
+                            return;
+                        }
+                        long delta;
+                        if (type == 0) {
+                            delta = amount * 60L * 60L * 1000L;
+                        } else if (type == 1) {
+                            delta = amount * 60L * 1000L;
+                        } else {
+                            delta = amount * 1000L;
+                        }
+                        long target = System.currentTimeMillis() + delta;
+                        mWorkingNote.setAlertDate(target, true);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     /**
