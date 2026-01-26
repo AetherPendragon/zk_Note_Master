@@ -30,4 +30,15 @@
         <item>蓝色</item>
         <item>紫色</item>
     </string-array>
+
+    <string-array name="habit_period_options">
+        <item>每日</item>
+        <item>每周</item>
+        <item>每月</item>
+    </string-array>
+
+    <string-array name="habit_target_type_options">
+        <item>次数</item>
+        <item>时长</item>
+    </string-array>
 </resources>

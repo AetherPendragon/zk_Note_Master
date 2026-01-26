@@ -49,4 +49,29 @@
     <item
         android:id="@+id/menu_picture_add"
         android:title="Add Picture" />
+
+    <item
+        android:id="@+id/menu_set_habit"
+        android:title="@string/habit_config_title"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/menu_habit_settings"
+        android:title="@string/habit_config_title"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/menu_stop_habit"
+        android:title="@string/habit_abandoned"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/menu_translate"
+        android:title="@string/translate_dialog_title"
+        android:visible="false" />
+
+    <item
+        android:id="@+id/menu_insert_image"
+        android:title="@string/menu_picture_add"
+        android:visible="false" />
 </menu>
