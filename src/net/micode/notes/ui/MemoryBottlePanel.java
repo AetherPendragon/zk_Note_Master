@@ -18,7 +18,6 @@ package net.micode.notes.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.appwidget.AppWidgetManager;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -32,7 +31,6 @@ import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -55,40 +53,34 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
+public class MemoryBottlePanel implements View.OnClickListener {
     private static final String PREF_MEMORY_FOLDER_ID = "pref_memory_bottle_folder_id";
-    private static final List<MemoryEntry> sAllEntries = new ArrayList<>();
-    private static final List<MemoryEntry> sRemainingEntries = new ArrayList<>();
+    private static final List<MemoryEntry> sAllEntries = new ArrayList<MemoryEntry>();
+    private static final List<MemoryEntry> sRemainingEntries = new ArrayList<MemoryEntry>();
     private static final Random sRandom = new Random();
     private static long sFolderId = Long.MIN_VALUE;
 
     private final Activity mActivity;
+    private final View mRootView;
     private Button mAddButton;
     private Button mBrowseButton;
     private long mMemoryFolderId = -1;
     private boolean mEntriesLoaded;
     private boolean mLoading;
     private boolean mBrowseLoading;
+    private boolean mDestroyed;
     private LoadTask mLoadTask;
     private BrowseTask mBrowseTask;
     private PendingAction mPendingAction = PendingAction.NONE;
 
-    public MemoryBottleDialog(Activity activity) {
-        super(activity, android.R.style.Theme_Light_NoTitleBar);
+    public MemoryBottlePanel(Activity activity, View rootView) {
         mActivity = activity;
-    }
-
-    @Override
-    protected void onCreate(android.os.Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.memory_bottle);
-        getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT);
+        mRootView = rootView;
         initResources();
     }
 
-    @Override
-    public void dismiss() {
+    public void destroy() {
+        mDestroyed = true;
         if (mLoadTask != null) {
             mLoadTask.cancel(true);
             mLoadTask = null;
@@ -97,14 +89,21 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
             mBrowseTask.cancel(true);
             mBrowseTask = null;
         }
-        super.dismiss();
+    }
+
+    private boolean isActive() {
+        return !mDestroyed;
     }
 
     private void initResources() {
-        mAddButton = (Button) findViewById(R.id.btn_memory_add);
-        mBrowseButton = (Button) findViewById(R.id.btn_memory_browse);
-        mAddButton.setOnClickListener(this);
-        mBrowseButton.setOnClickListener(this);
+        mAddButton = (Button) mRootView.findViewById(R.id.btn_memory_add);
+        mBrowseButton = (Button) mRootView.findViewById(R.id.btn_memory_browse);
+        if (mAddButton != null) {
+            mAddButton.setOnClickListener(this);
+        }
+        if (mBrowseButton != null) {
+            mBrowseButton.setOnClickListener(this);
+        }
         updateButtonState();
     }
 
@@ -147,7 +146,7 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     }
 
     private void startLoadTask(boolean loadEntries) {
-        if (mLoadTask != null) {
+        if (mLoadTask != null || !isActive()) {
             return;
         }
         setLoading(true);
@@ -190,20 +189,21 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
         builder.setPositiveButton(android.R.string.ok, null);
         builder.setNegativeButton(android.R.string.cancel, null);
         final AlertDialog dialog = builder.show();
-        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String content = editText.getText().toString().trim();
-                if (TextUtils.isEmpty(content)) {
-                    Toast.makeText(mActivity, R.string.memory_bottle_empty_input,
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                if (createMemoryNote(content)) {
-                    dialog.dismiss();
-                }
-            }
-        });
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String content = editText.getText().toString().trim();
+                        if (TextUtils.isEmpty(content)) {
+                            Toast.makeText(mActivity, R.string.memory_bottle_empty_input,
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (createMemoryNote(content)) {
+                            dialog.dismiss();
+                        }
+                    }
+                });
     }
 
     private boolean createMemoryNote(String content) {
@@ -262,13 +262,14 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     private void showBrowseFinishedDialog() {
         new AlertDialog.Builder(mActivity)
                 .setMessage(R.string.memory_bottle_browse_done)
-                .setPositiveButton(R.string.memory_bottle_restart, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        resetRemainingEntries();
-                        showRandomEntry();
-                    }
-                })
+                .setPositiveButton(R.string.memory_bottle_restart,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                resetRemainingEntries();
+                                showRandomEntry();
+                            }
+                        })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
@@ -285,7 +286,7 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     }
 
     private void startBrowseTask(MemoryEntry entry) {
-        if (mBrowseTask != null) {
+        if (mBrowseTask != null || !isActive()) {
             return;
         }
         setBrowseLoading(true);
@@ -381,7 +382,7 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     }
 
     private List<MemoryEntry> loadEntriesFromDatabase(long folderId) {
-        List<MemoryEntry> entries = new ArrayList<>();
+        List<MemoryEntry> entries = new ArrayList<MemoryEntry>();
         ContentResolver resolver = mActivity.getContentResolver();
         Cursor cursor = resolver.query(
                 Notes.CONTENT_NOTE_URI,
@@ -429,59 +430,59 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     }
 
     private static final class LoadTask extends AsyncTask<Void, Void, LoadResult> {
-        private final WeakReference<MemoryBottleDialog> mRef;
+        private final WeakReference<MemoryBottlePanel> mRef;
         private final boolean mLoadEntries;
 
-        private LoadTask(MemoryBottleDialog dialog, boolean loadEntries) {
-            mRef = new WeakReference<>(dialog);
+        private LoadTask(MemoryBottlePanel panel, boolean loadEntries) {
+            mRef = new WeakReference<MemoryBottlePanel>(panel);
             mLoadEntries = loadEntries;
         }
 
         @Override
         protected LoadResult doInBackground(Void... params) {
-            MemoryBottleDialog dialog = mRef.get();
-            if (dialog == null) {
+            MemoryBottlePanel panel = mRef.get();
+            if (panel == null || !panel.isActive()) {
                 return null;
             }
-            long folderId = dialog.ensureMemoryFolder();
-            List<MemoryEntry> entries = new ArrayList<>();
+            long folderId = panel.ensureMemoryFolder();
+            List<MemoryEntry> entries = new ArrayList<MemoryEntry>();
             if (folderId > 0 && mLoadEntries) {
-                entries = dialog.loadEntriesFromDatabase(folderId);
+                entries = panel.loadEntriesFromDatabase(folderId);
             }
             return new LoadResult(folderId, entries, mLoadEntries);
         }
 
         @Override
         protected void onPostExecute(LoadResult result) {
-            MemoryBottleDialog dialog = mRef.get();
-            if (dialog == null || !dialog.isShowing()) {
+            MemoryBottlePanel panel = mRef.get();
+            if (panel == null || !panel.isActive()) {
                 return;
             }
-            dialog.mLoadTask = null;
-            dialog.setLoading(false);
+            panel.mLoadTask = null;
+            panel.setLoading(false);
             if (result == null || result.folderId <= 0) {
-                Toast.makeText(dialog.mActivity, R.string.memory_bottle_folder_error,
+                Toast.makeText(panel.mActivity, R.string.memory_bottle_folder_error,
                         Toast.LENGTH_SHORT).show();
-                dialog.mPendingAction = PendingAction.NONE;
+                panel.mPendingAction = PendingAction.NONE;
                 return;
             }
-            dialog.mMemoryFolderId = result.folderId;
+            panel.mMemoryFolderId = result.folderId;
             sFolderId = result.folderId;
             if (result.loadedEntries) {
                 sAllEntries.clear();
                 sAllEntries.addAll(result.entries);
                 sRemainingEntries.clear();
                 sRemainingEntries.addAll(result.entries);
-                dialog.mEntriesLoaded = true;
+                panel.mEntriesLoaded = true;
             } else if (sFolderId == result.folderId) {
-                dialog.mEntriesLoaded = !sAllEntries.isEmpty();
+                panel.mEntriesLoaded = !sAllEntries.isEmpty();
             }
-            PendingAction pending = dialog.mPendingAction;
-            dialog.mPendingAction = PendingAction.NONE;
+            PendingAction pending = panel.mPendingAction;
+            panel.mPendingAction = PendingAction.NONE;
             if (pending == PendingAction.ADD) {
-                dialog.showAddDialog();
+                panel.showAddDialog();
             } else if (pending == PendingAction.BROWSE) {
-                dialog.browseMemory();
+                panel.browseMemory();
             }
         }
     }
@@ -497,52 +498,53 @@ public class MemoryBottleDialog extends Dialog implements View.OnClickListener {
     }
 
     private static final class BrowseTask extends AsyncTask<Void, Void, BrowseResult> {
-        private final WeakReference<MemoryBottleDialog> mRef;
+        private final WeakReference<MemoryBottlePanel> mRef;
         private final MemoryEntry mEntry;
 
-        private BrowseTask(MemoryBottleDialog dialog, MemoryEntry entry) {
-            mRef = new WeakReference<>(dialog);
+        private BrowseTask(MemoryBottlePanel panel, MemoryEntry entry) {
+            mRef = new WeakReference<MemoryBottlePanel>(panel);
             mEntry = entry;
         }
 
         @Override
         protected BrowseResult doInBackground(Void... params) {
-            MemoryBottleDialog dialog = mRef.get();
-            if (dialog == null) {
+            MemoryBottlePanel panel = mRef.get();
+            if (panel == null || !panel.isActive()) {
                 return null;
             }
             String content = mEntry.content;
             if (TextUtils.isEmpty(content)) {
-                content = dialog.queryNoteContent(dialog.mActivity.getContentResolver(), mEntry.id);
+                content = panel.queryNoteContent(panel.mActivity.getContentResolver(), mEntry.id);
             }
             if (TextUtils.isEmpty(content)) {
-                content = dialog.mActivity.getString(R.string.memory_bottle_missing_content);
+                content = panel.mActivity.getString(R.string.memory_bottle_missing_content);
             }
             return new BrowseResult(mEntry, content);
         }
 
         @Override
-        protected void onPostExecute(BrowseResult result) {
-            MemoryBottleDialog dialog = mRef.get();
-            if (dialog == null || !dialog.isShowing()) {
+        protected void onPostExecute(final BrowseResult result) {
+            final MemoryBottlePanel panel = mRef.get();
+            if (panel == null || !panel.isActive()) {
                 return;
             }
-            dialog.mBrowseTask = null;
-            dialog.setBrowseLoading(false);
+            panel.mBrowseTask = null;
+            panel.setBrowseLoading(false);
             if (result == null) {
                 return;
             }
-            String message = dialog.formatEntryMessage(result.entry.createdDate, result.content);
-            new AlertDialog.Builder(dialog.mActivity)
+            String message = panel.formatEntryMessage(result.entry.createdDate, result.content);
+            new AlertDialog.Builder(panel.mActivity)
                     .setTitle(R.string.memory_bottle_title)
                     .setMessage(message)
                     .setPositiveButton(R.string.memory_bottle_close, null)
-                    .setNegativeButton(R.string.memory_bottle_delete, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int which) {
-                            dialog.deleteMemoryEntry(result.entry);
-                        }
-                    })
+                    .setNegativeButton(R.string.memory_bottle_delete,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int which) {
+                                    panel.deleteMemoryEntry(result.entry);
+                                }
+                            })
                     .show();
         }
     }

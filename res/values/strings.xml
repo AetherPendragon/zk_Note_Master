@@ -105,6 +105,8 @@
     <string name="memory_bottle_missing_content">Content is empty.</string>
     <string name="memory_bottle_entry_format">Created: %1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">Memory Bottle</string>
+    <string name="tab_notes">Notes</string>
+    <string name="tab_memory">Memory Bottle</string>
     <string name="encrypted_folder_title">Create encrypted folder</string>
     <string name="encrypted_question_hint">Security question</string>
     <string name="encrypted_answer_hint">Answer</string>

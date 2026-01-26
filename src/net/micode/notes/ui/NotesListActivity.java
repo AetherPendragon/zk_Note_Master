@@ -105,9 +105,13 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private ListView mNotesListView;
 
     private Button mAddNewNote;
-    private Button mMemoryBottle;
     private ImageButton mTrashButton;
-    private MemoryBottleDialog mMemoryBottleDialog;
+    private Button mTabNotes;
+    private Button mTabMemory;
+    private View mNotesContainer;
+    private View mMemoryContainer;
+    private MemoryBottlePanel mMemoryBottlePanel;
+    private boolean mInMemoryMode;
 
     private boolean mDispatch;
 
@@ -232,10 +236,16 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mAddNewNote = (Button) findViewById(R.id.btn_new_note);
         mAddNewNote.setOnClickListener(this);
         mAddNewNote.setOnTouchListener(new NewNoteOnTouchListener());
-        mMemoryBottle = (Button) findViewById(R.id.btn_memory_bottle);
-        mMemoryBottle.setOnClickListener(this);
         mTrashButton = (ImageButton) findViewById(R.id.btn_trash);
         mTrashButton.setOnClickListener(this);
+        mTabNotes = (Button) findViewById(R.id.btn_tab_notes);
+        mTabMemory = (Button) findViewById(R.id.btn_tab_memory);
+        mTabNotes.setOnClickListener(this);
+        mTabMemory.setOnClickListener(this);
+        mNotesContainer = findViewById(R.id.notes_container);
+        mMemoryContainer = findViewById(R.id.memory_container);
+        mMemoryBottlePanel = new MemoryBottlePanel(this, mMemoryContainer);
+        switchToNotesMode();
         mDispatch = false;
         mDispatchY = 0;
         mOriginY = 0;
@@ -283,7 +293,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                         openFolderInternal(data);
                     }
                 });
-        updateMemoryButtonVisibility();
         updateTrashButtonVisibility();
     }
 
@@ -318,9 +327,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mNotesListAdapter.setChoiceMode(true, mState == ListEditState.TRASH_FOLDER);
             mNotesListView.setLongClickable(false);
             mAddNewNote.setVisibility(View.GONE);
-            if (mMemoryBottle != null) {
-                mMemoryBottle.setVisibility(View.GONE);
-            }
             if (mTrashButton != null) {
                 mTrashButton.setVisibility(View.GONE);
             }
@@ -377,7 +383,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             } else {
                 mAddNewNote.setVisibility(View.VISIBLE);
             }
-            updateMemoryButtonVisibility();
             updateTrashButtonVisibility();
         }
 
@@ -626,8 +631,11 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             case R.id.btn_new_note:
                 createNewNote();
                 break;
-            case R.id.btn_memory_bottle:
-                openMemoryBottle();
+            case R.id.btn_tab_notes:
+                switchToNotesMode();
+                break;
+            case R.id.btn_tab_memory:
+                switchToMemoryMode();
                 break;
             case R.id.btn_trash:
                 openTrashFolder();
@@ -637,14 +645,34 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         }
     }
 
-    private void updateMemoryButtonVisibility() {
-        if (mMemoryBottle == null) {
-            return;
+    private void switchToNotesMode() {
+        mInMemoryMode = false;
+        if (mNotesContainer != null) {
+            mNotesContainer.setVisibility(View.VISIBLE);
         }
-        if (mState == ListEditState.NOTE_LIST) {
-            mMemoryBottle.setVisibility(View.VISIBLE);
-        } else {
-            mMemoryBottle.setVisibility(View.GONE);
+        if (mMemoryContainer != null) {
+            mMemoryContainer.setVisibility(View.GONE);
+        }
+        updateTabSelection();
+    }
+
+    private void switchToMemoryMode() {
+        mInMemoryMode = true;
+        if (mNotesContainer != null) {
+            mNotesContainer.setVisibility(View.GONE);
+        }
+        if (mMemoryContainer != null) {
+            mMemoryContainer.setVisibility(View.VISIBLE);
+        }
+        updateTabSelection();
+    }
+
+    private void updateTabSelection() {
+        if (mTabNotes != null) {
+            mTabNotes.setEnabled(!mInMemoryMode);
+        }
+        if (mTabMemory != null) {
+            mTabMemory.setEnabled(mInMemoryMode);
         }
     }
 
@@ -669,6 +697,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         return -1;
     }
     private void openFolderInternal(NoteItemData data) {
+        switchToNotesMode();
         mCurrentFolderId = data.getId();
         startAsyncNotesListQuery();
         if (data.getId() == Notes.ID_CALL_RECORD_FOLDER) {
@@ -683,18 +712,11 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mTitleBar.setText(data.getSnippet());
         }
         mTitleBar.setVisibility(View.VISIBLE);
-        updateMemoryButtonVisibility();
         updateTrashButtonVisibility();
     }
 
-    private void openMemoryBottle() {
-        if (mMemoryBottleDialog == null) {
-            mMemoryBottleDialog = new MemoryBottleDialog(this);
-        }
-        mMemoryBottleDialog.show();
-    }
-
     private void openTrashFolder() {
+        switchToNotesMode();
         mCurrentFolderId = Notes.ID_TRASH_FOLER;
         mState = ListEditState.TRASH_FOLDER;
         mTrashManager.cleanupExpiredTrash();
@@ -702,16 +724,14 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mTitleBar.setText(R.string.trash_folder_name);
         mTitleBar.setVisibility(View.VISIBLE);
         mAddNewNote.setVisibility(View.GONE);
-        updateMemoryButtonVisibility();
         updateTrashButtonVisibility();
     }
 
     @Override
     protected void onDestroy() {
-        if (mMemoryBottleDialog != null && mMemoryBottleDialog.isShowing()) {
-            mMemoryBottleDialog.dismiss();
+        if (mMemoryBottlePanel != null) {
+            mMemoryBottlePanel.destroy();
         }
-        mMemoryBottleDialog = null;
         super.onDestroy();
     }
 
@@ -814,13 +834,16 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     @Override
     public void onBackPressed() {
+        if (mInMemoryMode) {
+            switchToNotesMode();
+            return;
+        }
         switch (mState) {
             case SUB_FOLDER:
                 mCurrentFolderId = Notes.ID_ROOT_FOLDER;
                 mState = ListEditState.NOTE_LIST;
                 startAsyncNotesListQuery();
                 mTitleBar.setVisibility(View.GONE);
-                updateMemoryButtonVisibility();
                 updateTrashButtonVisibility();
                 break;
             case CALL_RECORD_FOLDER:
@@ -829,7 +852,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mAddNewNote.setVisibility(View.VISIBLE);
                 mTitleBar.setVisibility(View.GONE);
                 startAsyncNotesListQuery();
-                updateMemoryButtonVisibility();
                 updateTrashButtonVisibility();
                 break;
             case TRASH_FOLDER:
@@ -838,7 +860,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 startAsyncNotesListQuery();
                 mTitleBar.setVisibility(View.GONE);
                 mAddNewNote.setVisibility(View.VISIBLE);
-                updateMemoryButtonVisibility();
                 updateTrashButtonVisibility();
                 break;
             case NOTE_LIST:

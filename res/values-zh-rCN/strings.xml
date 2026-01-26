@@ -101,6 +101,8 @@
     <string name="memory_bottle_missing_content">内容为空</string>
     <string name="memory_bottle_entry_format">创建日期：%1$s\n\n%2$s</string>
     <string name="memory_bottle_folder_name">记忆漂流瓶</string>
+    <string name="tab_notes">便签</string>
+    <string name="tab_memory">漂流瓶</string>
     <string name="encrypted_folder_title">创建加密文件夹</string>
     <string name="encrypted_question_hint">安全问题</string>
     <string name="encrypted_answer_hint">答案</string>

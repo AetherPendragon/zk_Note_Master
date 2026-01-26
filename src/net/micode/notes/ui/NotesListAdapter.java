@@ -78,12 +78,22 @@ public class NotesListAdapter extends CursorAdapter {
         mSelectedIndex.clear();
         mChoiceMode = mode;
         mIncludeFolders = false;
+        if (mChoiceMode) {
+            calcNotesCount();
+        } else {
+            mNotesCount = 0;
+        }
     }
 
     public void setChoiceMode(boolean mode, boolean includeFolders) {
         mSelectedIndex.clear();
         mChoiceMode = mode;
         mIncludeFolders = includeFolders;
+        if (mChoiceMode) {
+            calcNotesCount();
+        } else {
+            mNotesCount = 0;
+        }
     }
 
     public void selectAll(boolean checked) {
@@ -167,13 +177,17 @@ public class NotesListAdapter extends CursorAdapter {
     @Override
     protected void onContentChanged() {
         super.onContentChanged();
-        calcNotesCount();
+        if (mChoiceMode) {
+            calcNotesCount();
+        }
     }
 
     @Override
     public void changeCursor(Cursor cursor) {
         super.changeCursor(cursor);
-        calcNotesCount();
+        if (mChoiceMode) {
+            calcNotesCount();
+        }
     }
 
     private void calcNotesCount() {
