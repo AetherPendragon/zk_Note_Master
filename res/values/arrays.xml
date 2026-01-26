@@ -28,4 +28,14 @@
         <item>Messaging</item>
         <item>Email</item>
     </string-array>
+
+    <string-array name="text_color_names">
+        <item>Black</item>
+        <item>Red</item>
+        <item>Orange</item>
+        <item>Yellow</item>
+        <item>Green</item>
+        <item>Blue</item>
+        <item>Purple</item>
+    </string-array>
 </resources>
