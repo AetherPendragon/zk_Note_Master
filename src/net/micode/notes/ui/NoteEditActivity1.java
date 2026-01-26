@@ -28,8 +28,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.net.Uri;
@@ -41,7 +39,6 @@ import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.text.style.BackgroundColorSpan;
-import android.text.style.ImageSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -926,67 +923,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
         }
 
-        Pattern imagePattern = Pattern.compile("【图】([^\\n]+)");
-        Matcher imageMatcher = imagePattern.matcher(spannable);
-        while (imageMatcher.find()) {
-            try {
-                // 修复1：判空避免trim()空指针
-                String imagePath = imageMatcher.group(1);
-                if (TextUtils.isEmpty(imagePath)) continue;
-                imagePath = imagePath.trim();
-
-                File imageFile = new File(imagePath);
-                if (!imageFile.exists() || !imageFile.isFile()) {
-                    Log.e(TAG, "图片文件不存在：" + imagePath);
-                    continue;
-                }
-
-                // 修复2：Bitmap预压缩，避免OOM
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true; // 先获取尺寸，不加载像素
-                BitmapFactory.decodeFile(imagePath, options);
-                // 计算采样率（按200x200压缩）
-                options.inSampleSize = calculateInSampleSize(options, 200, 200);
-                options.inJustDecodeBounds = false;
-                // 解码压缩后的图片
-                Bitmap bitmap = BitmapFactory.decodeFile(imagePath, options);
-                if (bitmap == null) {
-                    Log.e(TAG, "图片解码失败：" + imagePath);
-                    continue;
-                }
-                // 缩放（可选，压缩后已足够小）
-                bitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true);
-
-                ImageSpan imageSpan = new ImageSpan(this, bitmap);
-                spannable.setSpan(
-                        imageSpan,
-                        imageMatcher.start(),
-                        imageMatcher.end(),
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-            } catch (Exception e) {
-                Log.e(TAG, "解析图片失败", e);
-                continue;
-            }
-        }
-
         return spannable;
     }
-    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        final int width = options.outWidth;
-        final int height = options.outHeight;
-        int inSampleSize = 1;
-        if (height > reqHeight || width > reqWidth) {
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-            while ((halfHeight / inSampleSize) >= reqHeight
-                    && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-        return inSampleSize;
-    }
-
     private View getListItem(String item, int index) {
         View view = LayoutInflater.from(this).inflate(R.layout.note_edit_list_item, null);
         final NoteEditText edit = (NoteEditText) view.findViewById(R.id.et_edit_text);
