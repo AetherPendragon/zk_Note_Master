@@ -1,49 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!--
-    此文件定义了应用程序中一个菜单的布局。
-    菜单中包含了多个项目，每个项目对应一个功能。
-    具体功能通过项目对应的id和标题来定义。
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
 -->
 
 <menu
     xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/menu_new_note"
-        android:title="@string/notelist_menu_new" />
-    <!-- 删除功能的菜单项 -->
+
     <item
         android:id="@+id/menu_delete"
         android:title="@string/menu_delete" />
 
-    <!-- 字体大小设置功能的菜单项 -->
     <item
         android:id="@+id/menu_font_size"
         android:title="@string/menu_font_size"/>
 
-    <!-- 切换列表模式功能的菜单项 -->
     <item
         android:id="@+id/menu_list_mode"
         android:title="@string/menu_list_mode" />
 
-    <!-- 分享功能的菜单项 -->
     <item
         android:id="@+id/menu_share"
         android:title="@string/menu_share"/>
 
-    <!-- 发送到桌面功能的菜单项 -->
     <item
         android:id="@+id/menu_send_to_desktop"
         android:title="@string/menu_send_to_desktop"/>
 
-    <!-- 提醒功能的菜单项 -->
     <item
         android:id="@+id/menu_alert"
         android:title="@string/menu_alert" />
 
-    <!-- 添加图片提醒 -->
     <item
-        android:id="@+id/menu_picture_add"
-        android:title="Add Picture" />
-
+        android:id="@+id/menu_delete_remind"
+        android:title="@string/menu_remove_remind" />
+    <item
+        android:id="@+id/menu_translate"
+        android:title="@string/menu_translate" />
 </menu>

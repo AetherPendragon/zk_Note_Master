@@ -1,28 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!--
-    此文件定义了应用程序中菜单项的布局。
-    它使用Android的菜单XML格式来描述菜单项及其属性。
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
 -->
 
 <menu
     xmlns:android="http://schemas.android.com/apk/res/android">
-    <!--
-        定义了一个菜单项，用于移动操作。该菜单项始终显示在动作栏中，并显示文本标签。
-        菜单项的图标和标题通过引用资源来定义。
-    -->
     <item
         android:id="@+id/move"
         android:title="@string/menu_move"
-        android:icon="@drawable/menu_move"
-        android:showAsAction="always|withText" />
+        android:icon="@drawable/menu_move" />
 
-    <!--
-        定义了一个菜单项，用于删除操作。和上面的移动操作类似，这个菜单项也始终显示在动作栏中，并带有文本标签。
-    -->
     <item
         android:id="@+id/delete"
         android:title="@string/menu_delete"
-        android:icon="@drawable/menu_delete"
-        android:showAsAction="always|withText" />
+        android:icon="@drawable/menu_delete" />
+    
+    <item
+        android:id="@+id/restore"
+        android:title="@string/menu_restore"
+        android:icon="@drawable/baseline_restore_from_trash_24" />
 </menu>

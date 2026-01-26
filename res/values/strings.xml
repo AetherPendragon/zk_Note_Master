@@ -48,6 +48,13 @@
     <string name="menu_search">Search</string>
     <string name="menu_delete">Delete</string>
     <string name="menu_move">Move to folder</string>
+    <string name="menu_restore">Restore</string>
+    <string name="menu_delete_permanent">Delete forever</string>
+    <string name="menu_trash">Trash</string>
+    <string name="memory_bottle_delete">Delete</string>
+    <string name="memory_bottle_delete_success">Deleted.</string>
+    <string name="memory_bottle_delete_failed">Delete failed.</string>
+    <string name="trash_restore_invalid">Restore target missing, moved to root.</string>
     <string name="menu_select_title">%d selected</string>
     <string name="menu_select_none">Nothing selected, the operation is invalid</string>
     <string name="menu_select_all">Select all</string>
@@ -57,7 +64,42 @@
     <string name="menu_font_normal">Medium</string>
     <string name="menu_font_large">Large</string>
     <string name="menu_font_super">Super</string>
+    <string name="text_color_title">Text color</string>
+    <string name="menu_underline">Underline</string>
+    <string name="menu_text_color">Text color</string>
     <string name="menu_list_mode">Enter check list</string>
+    <string name="menu_create_encrypted_folder" translatable="false">Encrypted folder</string>
+    <string name="encrypted_folder_title">Create encrypted folder</string>
+    <string name="encrypted_question_hint">Security question</string>
+    <string name="encrypted_answer_hint">Answer</string>
+    <string name="encrypted_question_empty">Please enter a security question.</string>
+    <string name="encrypted_answer_empty">Please enter the answer.</string>
+    <string name="encrypted_unlock_title">Encrypted folder</string>
+    <string name="encrypted_answer_wrong">Wrong answer.</string>
+    <string name="menu_doodle">Draw</string>
+    <string name="doodle_title">Doodle</string>
+    <string name="doodle_clear">Clear</string>
+    <string name="doodle_save">Save</string>
+    <string name="doodle_save_failed">Save failed.</string>
+    <string name="memory_bottle_entry">Memory Bottle</string>
+    <string name="memory_bottle_title">Memory Bottle</string>
+    <string name="memory_bottle_add">Add memory</string>
+    <string name="memory_bottle_browse">Browse bottle</string>
+    <string name="memory_bottle_add_title">Add memory</string>
+    <string name="memory_bottle_add_hint">Write your thoughts...</string>
+    <string name="memory_bottle_tip">Save little thoughts and revisit them later.</string>
+    <string name="memory_bottle_empty">No memories yet, add one first.</string>
+    <string name="memory_bottle_empty_input">Please enter your memory.</string>
+    <string name="memory_bottle_browse_done">All memories viewed. Restart?</string>
+    <string name="memory_bottle_restart">Restart</string>
+    <string name="memory_bottle_close">Close</string>
+    <string name="memory_bottle_save_success">Memory saved.</string>
+    <string name="memory_bottle_save_failed">Save failed, please try again.</string>
+    <string name="memory_bottle_folder_error">Folder unavailable, please try again.</string>
+    <string name="memory_bottle_loading">Loading memories...</string>
+    <string name="memory_bottle_missing_content">Content is empty.</string>
+    <string name="memory_bottle_entry_format">Created: %1$s\n\n%2$s</string>
+    <string name="memory_bottle_folder_name">Memory Bottle</string>
     <string name="menu_normal_mode">Leave check list</string>
     <string name="menu_folder_view">View folder</string>
     <string name="menu_folder_delete">Delete folder</string>
@@ -67,6 +109,19 @@
     <string name="menu_send_to_desktop">Send to home</string>
     <string name="menu_alert">Remind me</string>
     <string name="menu_remove_remind">Delete reminder</string>
+     <string name="menu_translate">翻译</string>
+    <string name="menu_set_habit">设为习惯</string>
+    <string name="menu_habit_settings">习惯设置</string>
+    <string name="menu_stop_habit">停止习惯</string>
+    <string name="reminder_mode_title">Reminder type</string>
+    <string name="reminder_mode_absolute">Pick time</string>
+    <string name="reminder_mode_relative">After duration</string>
+    <string name="reminder_duration_title">Set duration</string>
+    <string name="reminder_hours_hint">Hours</string>
+    <string name="reminder_minutes_hint">Minutes</string>
+    <string name="reminder_seconds_hint">Seconds</string>
+    <string name="reminder_duration_empty">Please enter duration.</string>
+    <string name="reminder_duration_invalid">Invalid duration.</string>
     <string name="menu_title_select_folder">Select folder</string>
     <string name="menu_move_parent_folder">Parent folder</string>
     <string name="info_note_enter_desktop">Note added to home</string>
@@ -81,6 +136,7 @@
     <string name="error_note_not_exist">The note is not exist</string>
     <string name="error_note_empty_for_clock">Sorry, can not set clock on empty note</string>
     <string name="error_note_empty_for_send_to_desktop">Sorry, can not send and empty note to home</string>
+        <string name="error_no_sync_account">Please configure sync account in settings first</string>
     <string name="success_sdcard_export">Export successful</string>
     <string name="failed_sdcard_export">Export fail</string>
     <string name="format_exported_file_location">Export text file (%1$s) to SD (%2$s) directory</string>
@@ -117,6 +173,17 @@
     <string name="preferences_bg_random_appear_title">New note background color random</string>
 
     <string name="button_delete">Delete</string>
+
+     <string name="translate_dialog_title">翻译设置</string>
+     <string name="translate_target_language">目标语言</string>
+     <string name="translate_button">翻译</string>
+     <string name="translate_cancel">取消</string>
+     <string name="translate_progress">正在翻译，请稍候…</string>
+     <string name="translate_offline_hint">当前无网络，无法执行翻译</string>
+     <string name="translate_confirm_keep_title">是否保留翻译内容？</string>
+     <string name="translate_keep">保留</string>
+     <string name="translate_discard">不保留</string>
+     <string name="translate_cancel_action">取消</string>
     <string name="call_record_folder_name">Call notes</string>
     <string name="hint_foler_name">Input name</string>
 
@@ -126,6 +193,22 @@
     <string name="search">Notes</string>
     <string name="datetime_dialog_ok">set</string>
     <string name="datetime_dialog_cancel">cancel</string>
+    <string name="trash_folder_name" translatable="false">Trashcan</string>
+    <string name="alert_message_empty_trash" translatable="false">Are you sure to do it ?</string>
+
+    <string name="menu_picture_add" translatable="false">Add Picture</string>
+    <string name="toast_picture_insert_success" translatable="false">图片已插入便签</string>
+    <string name="error_picture_select" translatable="false">选择图片失败，请重试</string>
+
+    <string name="habit_config_title">习惯设置</string>
+    <string name="habit_record_complete">已记录为完成</string>
+    <string name="habit_record_skipped">已记录为跳过</string>
+    <string name="habit_snoozed">稍后提醒已设置</string>
+    <string name="habit_abandoned">习惯已停用</string>
+    <string name="habit_skip_title">选择跳过理由</string>
+    <string name="skip_reason_busy">太忙</string>
+    <string name="skip_reason_sick">生病</string>
+    <string name="skip_reason_other">其他</string>
     <plurals name="search_results_title">
          <item quantity="one"><xliff:g id="number" example="1">%1$s</xliff:g> result for \"<xliff:g id="search" example="???">%2$s</xliff:g>\"</item>
         <!-- Case of 0 or 2 or more results. -->

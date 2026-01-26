@@ -1,26 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!--
-    此文件定义了一个菜单资源，用于在应用程序中显示一个新的笔记选项。
-    版权归 MiCode 开源社区所有 (www.micode.net)
+<!-- Copyright (c) 2010-2011, The MiCode Open Source Community (www.micode.net)
 
-    本文件受 Apache 2.0 许可证保护，关于许可证的详细信息，请访问：
-    http://www.apache.org/licenses/LICENSE-2.0
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
 
-    除非适用法律要求或以书面形式同意，根据该许可证分发的软件
-    是在“原样”基础上分发的，不作任何明示或暗示的保证。
-    有关许可证的具体条款和限制，请参阅许可证文件。
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
 -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 定义了一个菜单项，用于创建新的笔记 -->
     <item
         android:id="@+id/menu_new_note"
-        android:title="@string/notelist_menu_new" />
-    <item
-        android:id="@+id/menu_empty_trash"
-        android:title="@string/menu_delete"
-        android:icon="@android:drawable/ic_menu_delete"
-        android:showAsAction="ifRoom"/>
+        android:title="@string/notelist_menu_new"/>
 </menu>

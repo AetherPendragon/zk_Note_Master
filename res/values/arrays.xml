@@ -28,4 +28,14 @@
         <item>Messaging</item>
         <item>Email</item>
     </string-array>
+    <string-array name="habit_period_options">
+        <item>每日</item>
+        <item>每周 X 次</item>
+        <item>工作日</item>
+    </string-array>
+
+    <string-array name="habit_target_type_options">
+        <item>连续天数</item>
+        <item>每月次数</item>
+    </string-array>
 </resources>

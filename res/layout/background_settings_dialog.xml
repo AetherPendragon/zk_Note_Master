@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择背景"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btn_solid_color"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="纯色背景"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_builtin_image"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="系统内置图片"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_gallery_image"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="从相册选择"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_reset_default"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="恢复默认"/>
+
+</LinearLayout>

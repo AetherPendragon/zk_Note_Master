@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="打卡周期" />
+    <Spinner android:id="@+id/spinner_period" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="提醒时间" />
+    <TimePicker android:id="@+id/tp_remind_time" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+    <LinearLayout android:id="@+id/ll_weekly_times" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="每周次数" />
+        <EditText android:id="@+id/et_weekly_times" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" />
+    </LinearLayout>
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="目标类型" />
+    <Spinner android:id="@+id/spinner_target_type" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="目标值" />
+    <EditText android:id="@+id/et_target_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" />
+
+</LinearLayout>

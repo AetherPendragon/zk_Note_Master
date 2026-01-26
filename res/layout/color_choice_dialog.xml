@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择纯色背景"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <View
+            android:id="@+id/color_white"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="#FFFFFF"
+            android:layout_margin="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <View
+            android:id="@+id/color_yellow"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="#FFFFCC"
+            android:layout_margin="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <View
+            android:id="@+id/color_red"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="#FFF0F0"
+            android:layout_margin="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <View
+            android:id="@+id/color_green"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="#E8FFF0"
+            android:layout_margin="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <View
+            android:id="@+id/color_blue"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="#DDE8FF"
+            android:layout_margin="8dp"
+            android:clickable="true"
+            android:focusable="true"/>
+
+    </LinearLayout>
+
+</LinearLayout>
