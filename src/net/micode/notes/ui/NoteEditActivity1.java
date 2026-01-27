@@ -211,14 +211,14 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             return false;
         }
         if (TextUtils.equals(Intent.ACTION_VIEW, intent.getAction())) {
-            long noteId = intent.getLongExtra(Intent.EXTRA_UID, 0);
+            long noteId = resolveNoteId(intent);
             mUserQuery = "";
 
             /**
              * Starting from the searched result
              */
             if (intent.hasExtra(SearchManager.EXTRA_DATA_KEY)) {
-                noteId = Long.parseLong(intent.getStringExtra(SearchManager.EXTRA_DATA_KEY));
+                noteId = resolveNoteId(intent);
                 mUserQuery = intent.getStringExtra(SearchManager.USER_QUERY);
             }
 
@@ -285,6 +285,36 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
         mWorkingNote.setOnSettingStatusChangedListener(this);
         return true;
+    }
+
+    private long resolveNoteId(Intent intent) {
+        if (intent == null) {
+            return 0;
+        }
+        long noteId = intent.getLongExtra(Intent.EXTRA_UID, 0);
+        if (noteId > 0) {
+            return noteId;
+        }
+        String extraData = intent.getStringExtra(SearchManager.EXTRA_DATA_KEY);
+        if (!TextUtils.isEmpty(extraData)) {
+            try {
+                return Long.parseLong(extraData);
+            } catch (NumberFormatException e) {
+                Log.e(TAG, "Invalid note id from search extra: " + extraData);
+            }
+        }
+        Uri data = intent.getData();
+        if (data != null) {
+            String last = data.getLastPathSegment();
+            if (!TextUtils.isEmpty(last)) {
+                try {
+                    return Long.parseLong(last);
+                } catch (NumberFormatException e) {
+                    Log.e(TAG, "Invalid note id from data uri: " + data);
+                }
+            }
+        }
+        return 0;
     }
 
     @Override

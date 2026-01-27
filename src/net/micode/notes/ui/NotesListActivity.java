@@ -536,7 +536,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         if (mCurrentFolderId == Notes.ID_ROOT_FOLDER) {
             long memoryFolderId = getMemoryBottleFolderId();
             if (mUseFallbackQuery) {
-                selection = NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER;
+                selection = "(" + NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER
+                        + " OR " + NoteColumns.PARENT_ID + " IS NULL)";
             }
             if (memoryFolderId > 0) {
                 selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
