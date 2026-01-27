@@ -171,7 +171,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK
                 && (requestCode == REQUEST_CODE_OPEN_NODE || requestCode == REQUEST_CODE_NEW_NODE)) {
-            mNotesListAdapter.changeCursor(null);
+            switchToNotesMode();
+            startAsyncNotesListQuery();
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
