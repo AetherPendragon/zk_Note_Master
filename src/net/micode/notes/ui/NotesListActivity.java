@@ -66,6 +66,8 @@ import android.widget.Toast;
 import net.micode.notes.R;
 import net.micode.notes.data.Notes;
 import net.micode.notes.data.Notes.NoteColumns;
+import net.micode.notes.data.Notes.DataColumns;
+import net.micode.notes.data.Notes.TextNote;
 import net.micode.notes.gtask.remote.GTaskSyncService;
 import net.micode.notes.model.WorkingNote;
 import net.micode.notes.tool.BackupUtils;
@@ -79,7 +81,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 public class NotesListActivity extends Activity implements OnClickListener, OnItemLongClickListener {
     private static final int FOLDER_NOTE_LIST_QUERY_TOKEN = 0;
@@ -118,6 +122,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private boolean mInMemoryMode;
     private boolean mUseFallbackQuery;
     private boolean mUseGlobalQuery;
+    private RepairTask mRepairTask;
 
     private boolean mDispatch;
 
@@ -591,6 +596,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                     mUseFallbackQuery = false;
                     mUseGlobalQuery = false;
                     mNotesListAdapter.changeCursor(cursor);
+                    if (mCurrentFolderId == Notes.ID_ROOT_FOLDER) {
+                        maybeRepairNotesFromData();
+                    }
                     break;
                 case FOLDER_LIST_QUERY_TOKEN:
                     if (cursor != null && cursor.getCount() > 0) {
@@ -834,6 +842,115 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         updateTrashButtonVisibility();
         updateSearchButtonVisibility();
         updateMoreButtonVisibility();
+    }
+
+    private void maybeRepairNotesFromData() {
+        if (mRepairTask != null) {
+            return;
+        }
+        mRepairTask = new RepairTask(this);
+        mRepairTask.execute();
+    }
+
+    private static final class RepairTask extends AsyncTask<Void, Void, Integer> {
+        private final java.lang.ref.WeakReference<NotesListActivity> mRef;
+
+        private RepairTask(NotesListActivity activity) {
+            mRef = new java.lang.ref.WeakReference<NotesListActivity>(activity);
+        }
+
+        @Override
+        protected Integer doInBackground(Void... params) {
+            NotesListActivity activity = mRef.get();
+            if (activity == null) {
+                return 0;
+            }
+            ContentResolver resolver = activity.mContentResolver;
+            int noteCount = queryNoteCount(resolver);
+            if (noteCount > 0) {
+                return 0;
+            }
+            LinkedHashMap<Long, String> dataMap = loadDataNotes(resolver);
+            if (dataMap.isEmpty()) {
+                return 0;
+            }
+            int repaired = 0;
+            long now = System.currentTimeMillis();
+            for (Map.Entry<Long, String> entry : dataMap.entrySet()) {
+                long noteId = entry.getKey();
+                if (noteId <= 0 || DataUtils.existInNoteDatabase(resolver, noteId)) {
+                    continue;
+                }
+                ContentValues values = new ContentValues();
+                values.put(NoteColumns.ID, noteId);
+                values.put(NoteColumns.PARENT_ID, Notes.ID_ROOT_FOLDER);
+                values.put(NoteColumns.TYPE, Notes.TYPE_NOTE);
+                values.put(NoteColumns.CREATED_DATE, now);
+                values.put(NoteColumns.MODIFIED_DATE, now);
+                values.put(NoteColumns.LOCAL_MODIFIED, 1);
+                values.put(NoteColumns.BG_COLOR_ID, ResourceParser.BG_DEFAULT_COLOR);
+                String snippet = DataUtils.getFormattedSnippet(entry.getValue());
+                values.put(NoteColumns.SNIPPET, snippet == null ? "" : snippet);
+                if (resolver.insert(Notes.CONTENT_NOTE_URI, values) != null) {
+                    repaired++;
+                }
+            }
+            return repaired;
+        }
+
+        @Override
+        protected void onPostExecute(Integer repaired) {
+            NotesListActivity activity = mRef.get();
+            if (activity == null) {
+                return;
+            }
+            activity.mRepairTask = null;
+            if (repaired != null && repaired > 0) {
+                activity.startAsyncNotesListQuery();
+            }
+        }
+
+        private static int queryNoteCount(ContentResolver resolver) {
+            Cursor cursor = resolver.query(Notes.CONTENT_NOTE_URI,
+                    new String[] { "COUNT(*)" },
+                    NoteColumns.TYPE + "=?",
+                    new String[] { String.valueOf(Notes.TYPE_NOTE) },
+                    null);
+            if (cursor == null) {
+                return 0;
+            }
+            try {
+                if (cursor.moveToFirst()) {
+                    return cursor.getInt(0);
+                }
+            } finally {
+                cursor.close();
+            }
+            return 0;
+        }
+
+        private static LinkedHashMap<Long, String> loadDataNotes(ContentResolver resolver) {
+            LinkedHashMap<Long, String> map = new LinkedHashMap<Long, String>();
+            Cursor cursor = resolver.query(Notes.CONTENT_DATA_URI,
+                    new String[] { DataColumns.NOTE_ID, DataColumns.CONTENT },
+                    DataColumns.MIME_TYPE + "=?",
+                    new String[] { TextNote.CONTENT_ITEM_TYPE },
+                    null);
+            if (cursor == null) {
+                return map;
+            }
+            try {
+                while (cursor.moveToNext()) {
+                    long noteId = cursor.getLong(0);
+                    if (!map.containsKey(noteId)) {
+                        map.put(noteId, cursor.getString(1));
+                    }
+                }
+            } finally {
+                cursor.close();
+            }
+            return map;
+        }
     }
 
     private void showMoreMenu(View anchor) {
