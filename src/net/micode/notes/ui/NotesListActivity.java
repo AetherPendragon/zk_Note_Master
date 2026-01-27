@@ -141,7 +141,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private static final String NORMAL_SELECTION = NoteColumns.PARENT_ID + "=?";
 
     private static final String ROOT_FOLDER_SELECTION = "(" + NoteColumns.TYPE + "<>"
-            + Notes.TYPE_SYSTEM + " AND " + NoteColumns.PARENT_ID + "=?)" + " OR ("
+            + Notes.TYPE_SYSTEM + " AND (" + NoteColumns.PARENT_ID + "=? OR "
+            + NoteColumns.PARENT_ID + "=?))" + " OR ("
             + NoteColumns.ID + "=" + Notes.ID_CALL_RECORD_FOLDER + " AND "
             + NoteColumns.NOTES_COUNT + ">0)";
 
@@ -516,11 +517,15 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             if (memoryFolderId > 0) {
                 selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
                 selectionArgs = new String[] {
-                        String.valueOf(mCurrentFolderId),
+                        String.valueOf(Notes.ID_ROOT_FOLDER),
+                        String.valueOf(Notes.ID_TEMPARAY_FOLDER),
                         String.valueOf(memoryFolderId)
                 };
             } else {
-                selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
+                selectionArgs = new String[] {
+                        String.valueOf(Notes.ID_ROOT_FOLDER),
+                        String.valueOf(Notes.ID_TEMPARAY_FOLDER)
+                };
             }
         } else {
             selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
@@ -659,6 +664,18 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         }
         if (mMemoryContainer != null) {
             mMemoryContainer.setVisibility(View.GONE);
+        }
+        if (mCurrentFolderId != Notes.ID_ROOT_FOLDER || mState != ListEditState.NOTE_LIST) {
+            mCurrentFolderId = Notes.ID_ROOT_FOLDER;
+            mState = ListEditState.NOTE_LIST;
+            if (mTitleBar != null) {
+                mTitleBar.setVisibility(View.GONE);
+            }
+            if (mAddNewNote != null) {
+                mAddNewNote.setVisibility(View.VISIBLE);
+            }
+            updateTrashButtonVisibility();
+            startAsyncNotesListQuery();
         }
         updateTabSelection();
     }
