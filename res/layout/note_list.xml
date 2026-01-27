@@ -93,17 +93,6 @@
                         android:background="@android:color/transparent"
                         android:src="@android:drawable/ic_menu_search"
                         android:contentDescription="@string/menu_search" />
-
-                    <ImageButton
-                        android:id="@+id/btn_more"
-                        android:layout_width="48dip"
-                        android:layout_height="48dip"
-                        android:layout_gravity="bottom|right"
-                        android:layout_marginRight="64dip"
-                        android:layout_marginBottom="8dip"
-                        android:background="@android:color/transparent"
-                        android:src="@android:drawable/ic_menu_more"
-                        android:contentDescription="@string/menu_setting" />
                 </FrameLayout>
             </LinearLayout>
 
@@ -137,6 +126,15 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/tab_memory" />
+
+            <ImageButton
+                android:id="@+id/btn_more"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_more"
+                android:contentDescription="@string/menu_setting" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

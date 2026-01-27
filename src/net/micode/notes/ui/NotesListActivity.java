@@ -793,11 +793,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         if (mMoreButton == null) {
             return;
         }
-        if (!mInMemoryMode) {
-            mMoreButton.setVisibility(View.VISIBLE);
-        } else {
-            mMoreButton.setVisibility(View.GONE);
-        }
+        mMoreButton.setVisibility(View.VISIBLE);
     }
 
     private long getMemoryBottleFolderId() {
