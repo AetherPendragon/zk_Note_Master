@@ -33,6 +33,8 @@ import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -165,6 +167,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     private String mText; // 用于存储富文本内容
     private int mNoteLength; // 文本长度
     private ImageInsertHelper mImageInsertHelper;
+    private static final int TEXT_UPDATE_DELAY_MS = 250;
+    private final Handler mUiHandler = new Handler(Looper.getMainLooper());
+    private Runnable mUpdateHeaderRunnable;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -444,14 +449,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 String safeText = text == null ? "" : text;
                 mText = safeText;
                 mNoteLength = safeText.length();
-                // 更新修改时间和字符数显示
-                mNoteHeaderHolder.tvModified.setText(
-                        DateUtils.formatDateTime(NoteEditActivity.this,
-                                mWorkingNote.getModifiedDate(),
-                                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_NUMERIC_DATE
-                                        | DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_SHOW_YEAR)
-                                + "\n字符数：" + mNoteLength
-                );
+                scheduleHeaderUpdate();
             }
         });
         
@@ -491,10 +489,38 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     @Override
     protected void onPause() {
         super.onPause();
+        if (mUpdateHeaderRunnable != null) {
+            mUiHandler.removeCallbacks(mUpdateHeaderRunnable);
+        }
         if(saveNote()) {
             Log.d(TAG, "Note data was saved with length:" + mWorkingNote.getContent().length());
         }
         clearSettingState();
+    }
+
+    private void scheduleHeaderUpdate() {
+        if (mUpdateHeaderRunnable == null) {
+            mUpdateHeaderRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    updateHeaderInfo();
+                }
+            };
+        }
+        mUiHandler.removeCallbacks(mUpdateHeaderRunnable);
+        mUiHandler.postDelayed(mUpdateHeaderRunnable, TEXT_UPDATE_DELAY_MS);
+    }
+
+    private void updateHeaderInfo() {
+        if (mNoteHeaderHolder == null || mNoteHeaderHolder.tvModified == null) {
+            return;
+        }
+        String info = DateUtils.formatDateTime(NoteEditActivity.this,
+                mWorkingNote.getModifiedDate(),
+                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_NUMERIC_DATE
+                        | DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_SHOW_YEAR)
+                + "\n字符数：" + mNoteLength;
+        mNoteHeaderHolder.tvModified.setText(info);
     }
 
     private void updateWidget() {

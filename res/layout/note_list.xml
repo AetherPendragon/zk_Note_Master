@@ -27,27 +27,6 @@
         android:layout_height="fill_parent"
         android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/tab_bar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_tab_notes"
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/tab_notes" />
-
-            <Button
-                android:id="@+id/btn_tab_memory"
-                android:layout_width="0dip"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/tab_memory" />
-        </LinearLayout>
-
         <FrameLayout
             android:id="@+id/content_container"
             android:layout_width="match_parent"
@@ -116,5 +95,26 @@
                 <include layout="@layout/memory_bottle" />
             </LinearLayout>
         </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_tab_notes"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/tab_notes" />
+
+            <Button
+                android:id="@+id/btn_tab_memory"
+                android:layout_width="0dip"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/tab_memory" />
+        </LinearLayout>
     </LinearLayout>
 </FrameLayout>

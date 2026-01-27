@@ -16,6 +16,7 @@
 
 package net.micode.notes.ui;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -49,6 +50,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnCreateContextMenuListener;
 import android.view.View.OnTouchListener;
+import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -151,7 +153,12 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.note_list);
+        ActionBar actionBar = getActionBar();
+        if (actionBar != null) {
+            actionBar.hide();
+        }
         initResources();
 
         /**
@@ -669,10 +676,12 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     private void updateTabSelection() {
         if (mTabNotes != null) {
-            mTabNotes.setEnabled(!mInMemoryMode);
+            mTabNotes.setEnabled(true);
+            mTabNotes.setSelected(!mInMemoryMode);
         }
         if (mTabMemory != null) {
-            mTabMemory.setEnabled(mInMemoryMode);
+            mTabMemory.setEnabled(true);
+            mTabMemory.setSelected(mInMemoryMode);
         }
     }
 
