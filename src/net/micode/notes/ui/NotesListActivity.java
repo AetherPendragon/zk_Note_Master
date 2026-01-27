@@ -108,12 +108,14 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     private Button mAddNewNote;
     private ImageButton mTrashButton;
+    private ImageButton mSearchButton;
     private Button mTabNotes;
     private Button mTabMemory;
     private View mNotesContainer;
     private View mMemoryContainer;
     private MemoryBottlePanel mMemoryBottlePanel;
     private boolean mInMemoryMode;
+    private boolean mUseFallbackQuery;
 
     private boolean mDispatch;
 
@@ -246,6 +248,10 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mAddNewNote.setOnTouchListener(new NewNoteOnTouchListener());
         mTrashButton = (ImageButton) findViewById(R.id.btn_trash);
         mTrashButton.setOnClickListener(this);
+        mSearchButton = (ImageButton) findViewById(R.id.btn_search);
+        if (mSearchButton != null) {
+            mSearchButton.setOnClickListener(this);
+        }
         mTabNotes = (Button) findViewById(R.id.btn_tab_notes);
         mTabMemory = (Button) findViewById(R.id.btn_tab_memory);
         mTabNotes.setOnClickListener(this);
@@ -302,6 +308,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                     }
                 });
         updateTrashButtonVisibility();
+        updateSearchButtonVisibility();
     }
 
     private class ModeCallback implements ListView.MultiChoiceModeListener, OnMenuItemClickListener {
@@ -337,6 +344,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mAddNewNote.setVisibility(View.GONE);
             if (mTrashButton != null) {
                 mTrashButton.setVisibility(View.GONE);
+            }
+            if (mSearchButton != null) {
+                mSearchButton.setVisibility(View.GONE);
             }
 
             View customView = LayoutInflater.from(NotesListActivity.this).inflate(
@@ -392,6 +402,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mAddNewNote.setVisibility(View.VISIBLE);
             }
             updateTrashButtonVisibility();
+            updateSearchButtonVisibility();
         }
 
         public void finishActionMode() {
@@ -511,14 +522,15 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private void startAsyncNotesListQuery() {
         String selection = (mCurrentFolderId == Notes.ID_ROOT_FOLDER) ? ROOT_FOLDER_SELECTION
                 : NORMAL_SELECTION;
-        String[] selectionArgs;
+        String[] selectionArgs = null;
         if (mCurrentFolderId == Notes.ID_ROOT_FOLDER) {
             long memoryFolderId = getMemoryBottleFolderId();
+            if (mUseFallbackQuery) {
+                selection = NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER;
+            }
             if (memoryFolderId > 0) {
                 selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
                 selectionArgs = new String[] { String.valueOf(memoryFolderId) };
-            } else {
-                selectionArgs = null;
             }
         } else {
             selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
@@ -537,6 +549,18 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
             switch (token) {
                 case FOLDER_NOTE_LIST_QUERY_TOKEN:
+                    if (cursor == null) {
+                        mNotesListAdapter.changeCursor(null);
+                        break;
+                    }
+                    if (mCurrentFolderId == Notes.ID_ROOT_FOLDER && !mUseFallbackQuery
+                            && cursor.getCount() == 0) {
+                        mUseFallbackQuery = true;
+                        cursor.close();
+                        startAsyncNotesListQuery();
+                        return;
+                    }
+                    mUseFallbackQuery = false;
                     mNotesListAdapter.changeCursor(cursor);
                     break;
                 case FOLDER_LIST_QUERY_TOKEN:
@@ -645,6 +669,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             case R.id.btn_trash:
                 openTrashFolder();
                 break;
+            case R.id.btn_search:
+                onSearchRequested();
+                break;
             default:
                 break;
         }
@@ -668,8 +695,10 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mAddNewNote.setVisibility(View.VISIBLE);
             }
             updateTrashButtonVisibility();
+            updateSearchButtonVisibility();
             startAsyncNotesListQuery();
         }
+        updateSearchButtonVisibility();
         updateTabSelection();
     }
 
@@ -681,6 +710,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         if (mMemoryContainer != null) {
             mMemoryContainer.setVisibility(View.VISIBLE);
         }
+        updateSearchButtonVisibility();
         updateTabSelection();
     }
 
@@ -703,6 +733,17 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             mTrashButton.setVisibility(View.VISIBLE);
         } else {
             mTrashButton.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateSearchButtonVisibility() {
+        if (mSearchButton == null) {
+            return;
+        }
+        if (!mInMemoryMode && mState == ListEditState.NOTE_LIST) {
+            mSearchButton.setVisibility(View.VISIBLE);
+        } else {
+            mSearchButton.setVisibility(View.GONE);
         }
     }
 
@@ -732,6 +773,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         }
         mTitleBar.setVisibility(View.VISIBLE);
         updateTrashButtonVisibility();
+        updateSearchButtonVisibility();
     }
 
     private void openTrashFolder() {
@@ -744,6 +786,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         mTitleBar.setVisibility(View.VISIBLE);
         mAddNewNote.setVisibility(View.GONE);
         updateTrashButtonVisibility();
+        updateSearchButtonVisibility();
     }
 
     @Override
@@ -864,6 +907,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 startAsyncNotesListQuery();
                 mTitleBar.setVisibility(View.GONE);
                 updateTrashButtonVisibility();
+                updateSearchButtonVisibility();
                 break;
             case CALL_RECORD_FOLDER:
                 mCurrentFolderId = Notes.ID_ROOT_FOLDER;
@@ -872,6 +916,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mTitleBar.setVisibility(View.GONE);
                 startAsyncNotesListQuery();
                 updateTrashButtonVisibility();
+                updateSearchButtonVisibility();
                 break;
             case TRASH_FOLDER:
                 mCurrentFolderId = Notes.ID_ROOT_FOLDER;
@@ -880,6 +925,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 mTitleBar.setVisibility(View.GONE);
                 mAddNewNote.setVisibility(View.VISIBLE);
                 updateTrashButtonVisibility();
+                updateSearchButtonVisibility();
                 break;
             case NOTE_LIST:
                 super.onBackPressed();
