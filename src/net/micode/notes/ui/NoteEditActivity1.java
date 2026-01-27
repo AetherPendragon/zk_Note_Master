@@ -449,6 +449,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 String safeText = text == null ? "" : text;
                 mText = safeText;
                 mNoteLength = safeText.length();
+                if (mWorkingNote != null) {
+                    mWorkingNote.setWorkingText(safeText);
+                }
                 scheduleHeaderUpdate();
             }
         });

@@ -169,13 +169,12 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK
-                && (requestCode == REQUEST_CODE_OPEN_NODE || requestCode == REQUEST_CODE_NEW_NODE)) {
+        if (requestCode == REQUEST_CODE_OPEN_NODE || requestCode == REQUEST_CODE_NEW_NODE) {
             switchToNotesMode();
             startAsyncNotesListQuery();
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
+            return;
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void setAppInfoFromRawRes() {
