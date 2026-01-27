@@ -117,6 +117,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     private MemoryBottlePanel mMemoryBottlePanel;
     private boolean mInMemoryMode;
     private boolean mUseFallbackQuery;
+    private boolean mUseGlobalQuery;
 
     private boolean mDispatch;
 
@@ -539,9 +540,18 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 selection = "(" + NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER
                         + " OR " + NoteColumns.PARENT_ID + " IS NULL)";
             }
+            if (mUseGlobalQuery) {
+                selection = null;
+                selectionArgs = null;
+            }
             if (memoryFolderId > 0) {
-                selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
-                selectionArgs = new String[] { String.valueOf(memoryFolderId) };
+                if (selection == null) {
+                    selection = NoteColumns.ID + "<> ?";
+                    selectionArgs = new String[] { String.valueOf(memoryFolderId) };
+                } else {
+                    selection = "(" + selection + ") AND " + NoteColumns.ID + "<> ?";
+                    selectionArgs = new String[] { String.valueOf(memoryFolderId) };
+                }
             }
         } else {
             selectionArgs = new String[] { String.valueOf(mCurrentFolderId) };
@@ -571,7 +581,15 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                         startAsyncNotesListQuery();
                         return;
                     }
+                    if (mCurrentFolderId == Notes.ID_ROOT_FOLDER && mUseFallbackQuery
+                            && !mUseGlobalQuery && cursor.getCount() == 0) {
+                        mUseGlobalQuery = true;
+                        cursor.close();
+                        startAsyncNotesListQuery();
+                        return;
+                    }
                     mUseFallbackQuery = false;
+                    mUseGlobalQuery = false;
                     mNotesListAdapter.changeCursor(cursor);
                     break;
                 case FOLDER_LIST_QUERY_TOKEN:

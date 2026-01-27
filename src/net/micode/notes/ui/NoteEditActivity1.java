@@ -222,6 +222,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 mUserQuery = intent.getStringExtra(SearchManager.USER_QUERY);
             }
 
+            if (noteId <= 0) {
+                showToast(R.string.error_note_not_exist);
+                finish();
+                return false;
+            }
             if (!DataUtils.visibleInNoteDatabase(getContentResolver(), noteId, Notes.TYPE_NOTE)) {
                 Intent jump = new Intent(this, NotesListActivity.class);
                 startActivity(jump);
@@ -229,7 +234,13 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 finish();
                 return false;
             } else {
-                mWorkingNote = WorkingNote.load(this, noteId);
+                try {
+                    mWorkingNote = WorkingNote.load(this, noteId);
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, "load note failed with note id " + noteId, e);
+                    finish();
+                    return false;
+                }
                 if (mWorkingNote == null) {
                     Log.e(TAG, "load note failed with note id" + noteId);
                     finish();
