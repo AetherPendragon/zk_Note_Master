@@ -596,7 +596,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                     mUseFallbackQuery = false;
                     mUseGlobalQuery = false;
                     mNotesListAdapter.changeCursor(cursor);
-                    if (mCurrentFolderId == Notes.ID_ROOT_FOLDER) {
+                    if (mCurrentFolderId == Notes.ID_ROOT_FOLDER && cursor.getCount() == 0) {
                         maybeRepairNotesFromData();
                     }
                     break;
@@ -862,10 +862,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 return 0;
             }
             ContentResolver resolver = activity.mContentResolver;
-            int noteCount = queryNoteCount(resolver);
-            if (noteCount > 0) {
-                return 0;
-            }
             LinkedHashMap<Long, String> dataMap = loadDataNotes(resolver);
             if (dataMap.isEmpty()) {
                 return 0;
@@ -904,25 +900,6 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             if (repaired != null && repaired > 0) {
                 activity.startAsyncNotesListQuery();
             }
-        }
-
-        private static int queryNoteCount(ContentResolver resolver) {
-            Cursor cursor = resolver.query(Notes.CONTENT_NOTE_URI,
-                    new String[] { "COUNT(*)" },
-                    NoteColumns.TYPE + "=?",
-                    new String[] { String.valueOf(Notes.TYPE_NOTE) },
-                    null);
-            if (cursor == null) {
-                return 0;
-            }
-            try {
-                if (cursor.moveToFirst()) {
-                    return cursor.getInt(0);
-                }
-            } finally {
-                cursor.close();
-            }
-            return 0;
         }
 
         private static LinkedHashMap<Long, String> loadDataNotes(ContentResolver resolver) {
