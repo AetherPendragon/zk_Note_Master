@@ -7,14 +7,13 @@
 #include "queue_utils.h"
 
 sem_t sem_customers;
-sem_t sem_barber_ready;
 sem_t sem_mutex;
+sem_t *sem_customer_ready;
 
 int num_chairs;
 int waiting_count = 0;
-int barber_working = 0;
 int shop_open = 1;
-int current_customer_id = -1;
+int total_customers = 0;
 struct waiting_queue wait_queue;
 
 void* barber(void* arg) {
@@ -22,14 +21,14 @@ void* barber(void* arg) {
 
     while (1) {
         sem_wait(&sem_mutex);
-
-        while (waiting_count == 0 && shop_open) {
+        if (waiting_count == 0 && shop_open) {
             printf("[理发师] 没有顾客等待，进入睡眠状态\n");
-            sem_post(&sem_mutex);
-            sem_wait(&sem_customers);
-            sem_wait(&sem_mutex);
         }
+        sem_post(&sem_mutex);
 
+        sem_wait(&sem_customers);
+
+        sem_wait(&sem_mutex);
         if (!shop_open && waiting_count == 0) {
             sem_post(&sem_mutex);
             break;
@@ -41,26 +40,17 @@ void* barber(void* arg) {
         }
 
         int curr_id = queue_pop(&wait_queue, &waiting_count);
-        current_customer_id = curr_id;
-        barber_working = 1;
 
         printf("├─[理发师]准备为顾客/%d理发（剩余等待=%d）\n", curr_id, waiting_count);
         printf("├─[理发师] 开始为顾客/%d理发...\n", curr_id);
-
-        int wake_count = waiting_count + 1;
-        for (int i = 0; i < wake_count; i++) {
-            sem_post(&sem_barber_ready);
-        }
-
         sem_post(&sem_mutex);
+        sem_post(&sem_customer_ready[curr_id]);
 
         sleep(2);
 
         sem_wait(&sem_mutex);
         printf("[理发师] 顾客/%d 理发完成\n", curr_id);
         printf("顾客/%d 满意离开\n", curr_id);
-        barber_working = 0;
-        current_customer_id = -1;
         sem_post(&sem_mutex);
     }
 
@@ -85,14 +75,11 @@ void* customer(void* arg) {
     if (queue_push(&wait_queue, id, &waiting_count, num_chairs) == 0) {
         printf("顾客/%d 进入等待区（当前等待人数=%d）\n", id, waiting_count);
         sem_post(&sem_customers);
+        sem_post(&sem_mutex);
 
-        while (current_customer_id != id) {
-            sem_post(&sem_mutex);
-            sem_wait(&sem_barber_ready);
-            sem_wait(&sem_mutex);
-        }
-
+        sem_wait(&sem_customer_ready[id]);
         printf("顾客/%d 开始理发\n", id);
+        pthread_exit(NULL);
     }
 
     sem_post(&sem_mutex);
@@ -107,7 +94,7 @@ int main(int argc, char *argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
 
     num_chairs = atoi(argv[1]);
-    int total_customers = atoi(argv[2]);
+    total_customers = atoi(argv[2]);
 
     if (queue_init(&wait_queue, num_chairs) != 0) {
         printf("[系统] 队列初始化失败！\n");
@@ -119,8 +106,16 @@ int main(int argc, char *argv[]) {
     printf("[系统] 理发店开张：座位数=%d，今日顾客=%d\n", num_chairs, total_customers);
 
     sem_init(&sem_customers, 0, 0);
-    sem_init(&sem_barber_ready, 0, 0);
     sem_init(&sem_mutex, 0, 1);
+
+    sem_customer_ready = malloc(sizeof(sem_t) * (total_customers + 1));
+    if (sem_customer_ready == NULL) {
+        printf("[系统] 内存分配失败！\n");
+        return 1;
+    }
+    for (int i = 1; i <= total_customers; i++) {
+        sem_init(&sem_customer_ready[i], 0, 0);
+    }
 
     pthread_t b_thread;
     pthread_create(&b_thread, NULL, barber, NULL);
@@ -147,8 +142,11 @@ int main(int argc, char *argv[]) {
 
     queue_destroy(&wait_queue);
     sem_destroy(&sem_customers);
-    sem_destroy(&sem_barber_ready);
     sem_destroy(&sem_mutex);
+    for (int i = 1; i <= total_customers; i++) {
+        sem_destroy(&sem_customer_ready[i]);
+    }
+    free(sem_customer_ready);
     free(c_threads);
 
     return 0;
