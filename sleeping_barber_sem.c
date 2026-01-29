@@ -22,14 +22,14 @@ void* barber(void* arg) {
 
     while (1) {
         sem_wait(&sem_mutex);
-        if (waiting_count == 0 && shop_open) {
+
+        while (waiting_count == 0 && shop_open) {
             printf("[理发师] 没有顾客等待，进入睡眠状态\n");
+            sem_post(&sem_mutex);
+            sem_wait(&sem_customers);
+            sem_wait(&sem_mutex);
         }
-        sem_post(&sem_mutex);
 
-        sem_wait(&sem_customers);
-
-        sem_wait(&sem_mutex);
         if (!shop_open && waiting_count == 0) {
             sem_post(&sem_mutex);
             break;
@@ -65,6 +65,7 @@ void* barber(void* arg) {
     }
 
     printf("[理发师] 理发店关门，结束工作\n");
+    fflush(stdout);
     pthread_exit(NULL);
 }
 
@@ -140,6 +141,8 @@ int main(int argc, char *argv[]) {
     sem_post(&sem_mutex);
     sem_post(&sem_customers);
     pthread_join(b_thread, NULL);
+    printf("[系统] 理发店打烊\n");
+    fflush(stdout);
 
     queue_destroy(&wait_queue);
     sem_destroy(&sem_customers);
