@@ -104,6 +104,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s <seats> <customers>\n", argv[0]);
         return 1;
     }
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     num_chairs = atoi(argv[1]);
     int total_customers = atoi(argv[2]);
